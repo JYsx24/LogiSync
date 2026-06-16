@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "388034836724",
+    "project_id": "logisync-66bed",
+    "storage_bucket": "logisync-66bed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388034836724:android:4d13ade0a17d5989cd06a1",
+        "android_client_info": {
+          "package_name": "com.logisync.inventorysystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3dLAMbhRrOUOH8OylhIkXmmQULJzsFSk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User profile: only the owner can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Inventory: only the owner (uid field) can read/write their own items
+    match /inventory/{itemId} {
+      allow read: if request.auth != null
+                  && resource.data.uid == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      allow update, delete: if request.auth != null
+                             && resource.data.uid == request.auth.uid;
+
+      // History logs: accessible only to the inventory item's owner
+      match /history/{historyId} {
+        allow read, write: if request.auth != null
+                           && get(/databases/$(database)/documents/inventory/$(itemId)).data.uid == request.auth.uid;
+      }
+    }
+
+    // Folders: only the owner (uid field) can read/write their own folders
+    match /folders/{folderId} {
+      allow read: if request.auth != null
+                  && resource.data.uid == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      allow update, delete: if request.auth != null
+                             && resource.data.uid == request.auth.uid;
+    }
+  }
+}
