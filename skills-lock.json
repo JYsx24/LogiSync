@@ -25,6 +25,12 @@
       "skillPath": "skills/firebase-basics/SKILL.md",
       "computedHash": "610305ba0d7fcb956001a2a96eea7902b63ae7367214aeee7ab0d93e0b6e8369"
     },
+    "firebase-cloud-functions": {
+      "source": "evanca/flutter-ai-rules",
+      "sourceType": "github",
+      "skillPath": "skills/firebase-cloud-functions/SKILL.md",
+      "computedHash": "2faf909321aaea59c95673e350bbd81f0c1e8b2683cd0cfef0f9785c3e9663a6"
+    },
     "firebase-crashlytics": {
       "source": "firebase/agent-skills",
       "sourceType": "github",
@@ -60,6 +66,12 @@
       "sourceType": "github",
       "skillPath": "skills/firebase-security-rules-auditor/SKILL.md",
       "computedHash": "42e793406ca8980c47fcdbd309f02838316849bcbf8475001b4ecaa6a67606b8"
+    },
+    "react-vite-best-practices": {
+      "source": "asyrafhussin/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-vite-best-practices/SKILL.md",
+      "computedHash": "bfd0d0cef40fd678863adcc5bc96a27ffb9c5cece99f56894dc22e5f36f37c6b"
     },
     "xcode-project-setup": {
       "source": "firebase/agent-skills",
