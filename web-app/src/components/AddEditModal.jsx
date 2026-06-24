@@ -8,6 +8,39 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useToast } from './Toast';
 
+function TimelineEntry({ log }) {
+  const date = log.timestamp?.toDate
+    ? log.timestamp.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : 'Just now';
+
+  const isPositive = String(log.action).startsWith('+');
+  const isNegative = String(log.action).startsWith('-');
+  const dotColor = isPositive ? 'bg-[var(--success)]' : isNegative ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]';
+
+  return (
+    <div className="flex gap-3 relative">
+      {/* Dot + line */}
+      <div className="flex flex-col items-center shrink-0 pt-0.5">
+        <div className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+        <div className="w-px flex-1 bg-[var(--border)] mt-1" />
+      </div>
+      {/* Content */}
+      <div className="pb-4 min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-xs font-bold ${isPositive ? 'text-[var(--success)]' : isNegative ? 'text-[var(--danger)]' : 'text-[var(--primary)]'}`}>
+            {log.action}
+          </span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[var(--surface-raised)] border border-[var(--border)] text-[var(--text-2)] font-semibold">
+            {log.quantity} units
+          </span>
+        </div>
+        <div className="text-[10px] text-[var(--text-3)] mt-0.5 truncate">{log.operator}</div>
+        <div className="text-[10px] text-[var(--text-3)] mt-0.5">{date}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function AddEditModal({ isOpen, onClose, editingItem, folders, user, activeFolderId, t }) {
   const toast = useToast();
 
@@ -46,18 +79,12 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
     if (!editingItem) { setHistoryLogs([]); return; }
     const historyRef = collection(db, 'inventory', editingItem.id, 'history');
     const q = query(historyRef, orderBy('timestamp', 'desc'));
-    const unsub = onSnapshot(q, snap => {
-      setHistoryLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    return unsub;
+    return onSnapshot(q, snap => setHistoryLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [editingItem]);
 
   const logChange = async (itemId, quantity, action) => {
     await addDoc(collection(db, 'inventory', itemId, 'history'), {
-      quantity: Number(quantity),
-      timestamp: serverTimestamp(),
-      operator: user.email,
-      action,
+      quantity: Number(quantity), timestamp: serverTimestamp(), operator: user.email, action,
     });
   };
 
@@ -76,13 +103,9 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       if (itemPhotoFile) photoUrlToSave = await uploadImage(itemPhotoFile);
 
       const data = {
-        name: itemName,
-        location: itemLocation,
-        quantity: Number(itemQuantity),
+        name: itemName, location: itemLocation, quantity: Number(itemQuantity),
         photoUrl: photoUrlToSave || 'https://images.unsplash.com/photo-1553413719-8758712747d5?auto=format&fit=crop&w=300&q=80',
-        folderId: itemFolderId,
-        lowStockThreshold: Number(lowStockThreshold),
-        uid: user.uid,
+        folderId: itemFolderId, lowStockThreshold: Number(lowStockThreshold), uid: user.uid,
       };
 
       if (editingItem) {
@@ -103,157 +126,152 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
     }
   };
 
+  const FieldLabel = ({ children }) => (
+    <label className="block text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{children}</label>
+  );
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-sm">
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-[var(--panel-border)] flex flex-col md:flex-row"
-            style={{ background: 'var(--modal-bg)' }}
+            initial={{ scale: 0.97, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.97, opacity: 0, y: 20 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col sm:flex-row max-h-[90dvh]"
+            style={{ background: 'var(--surface-overlay)', border: '1px solid var(--border-strong)' }}
           >
-            {/* Form */}
-            <form onSubmit={handleSave} className="p-6 space-y-4 flex-1">
-              <div className="pb-3 border-b border-[var(--panel-border)]">
-                <h2 className="text-base font-bold text-[var(--text-color)]">
-                  {editingItem ? t('editingStock') : t('registerSKU')}
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                {[
-                  { id: 'modal-name-input', label: t('itemName'), type: 'text', value: itemName, onChange: e => setItemName(e.target.value), placeholder: t('itemName'), required: true },
-                  { id: 'modal-location-input', label: t('storageLocation'), type: 'text', value: itemLocation, onChange: e => setItemLocation(e.target.value), placeholder: t('storageLocation'), required: true },
-                ].map(field => (
-                  <div key={field.id}>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{field.label}</label>
-                    <input
-                      id={field.id}
-                      type={field.type}
-                      required={field.required}
-                      placeholder={field.placeholder}
-                      value={field.value}
-                      onChange={field.onChange}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] placeholder-[var(--text-muted)] focus:outline-none text-sm"
-                    />
+            {/* Form panel */}
+            <form onSubmit={handleSave} className="flex-1 flex flex-col overflow-y-auto">
+              <div className="p-6 flex-1 space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+                  <div>
+                    <h2 className="text-sm font-bold text-[var(--text)]">
+                      {editingItem ? t('editingStock') : t('registerSKU')}
+                    </h2>
+                    {editingItem && (
+                      <p className="text-[11px] text-[var(--text-3)] mt-0.5">{editingItem.name}</p>
+                    )}
                   </div>
-                ))}
+                  <button type="button" onClick={onClose}
+                    className="w-8 h-8 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] flex items-center justify-center transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
+                {/* Name */}
+                <div>
+                  <FieldLabel>{t('itemName')}</FieldLabel>
+                  <input id="modal-name-input" type="text" required placeholder={t('itemName')}
+                    value={itemName} onChange={e => setItemName(e.target.value)}
+                    className="field w-full px-4 py-2.5 text-sm" />
+                </div>
+
+                {/* Location */}
+                <div>
+                  <FieldLabel>{t('storageLocation')}</FieldLabel>
+                  <input id="modal-location-input" type="text" required placeholder={t('storageLocation')}
+                    value={itemLocation} onChange={e => setItemLocation(e.target.value)}
+                    className="field w-full px-4 py-2.5 text-sm" />
+                </div>
+
+                {/* Qty + threshold */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('quantity')}</label>
-                    <input
-                      id="modal-quantity-input"
-                      type="number"
-                      required
-                      min="0"
-                      value={itemQuantity}
-                      onChange={e => setItemQuantity(e.target.value)}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] focus:outline-none text-sm"
-                    />
+                    <FieldLabel>{t('quantity')}</FieldLabel>
+                    <input id="modal-quantity-input" type="number" required min="0"
+                      value={itemQuantity} onChange={e => setItemQuantity(e.target.value)}
+                      className="field w-full px-4 py-2.5 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('lowStockThreshold')}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={lowStockThreshold}
-                      onChange={e => setLowStockThreshold(e.target.value)}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] focus:outline-none text-sm"
-                    />
+                    <FieldLabel>{t('lowStockThreshold')}</FieldLabel>
+                    <input type="number" min="0"
+                      value={lowStockThreshold} onChange={e => setLowStockThreshold(e.target.value)}
+                      className="field w-full px-4 py-2.5 text-sm" />
                   </div>
                 </div>
 
+                {/* Folder */}
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('associateFolder')}</label>
-                  <select
-                    id="modal-folder-select"
-                    value={itemFolderId}
+                  <FieldLabel>{t('associateFolder')}</FieldLabel>
+                  <select id="modal-folder-select" value={itemFolderId}
                     onChange={e => setItemFolderId(e.target.value)}
-                    className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] bg-[var(--input-bg)] focus:outline-none text-sm"
-                  >
+                    className="field w-full px-4 py-2.5 text-sm">
                     <option value="">{t('uncategorized')}</option>
                     {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
                 </div>
 
+                {/* Photo */}
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('stockPhoto')}</label>
-                  <input
-                    id="modal-photo-file"
-                    type="file"
-                    accept="image/*"
-                    onChange={e => setItemPhotoFile(e.target.files[0])}
-                    className="w-full text-xs text-[var(--text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-[var(--input-bg)] file:text-[var(--text-color)] hover:file:bg-[var(--panel-bg)] file:cursor-pointer"
-                  />
-                  {itemPhotoUrl && !itemPhotoFile && (
-                    <div className="text-[10px] text-[var(--text-muted-dark)] mt-1">{t('photoUrlActive')}</div>
-                  )}
+                  <FieldLabel>{t('stockPhoto')}</FieldLabel>
+                  <label className="flex items-center gap-3 p-3 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] cursor-pointer hover:border-[var(--border-strong)] transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4 text-[var(--text-3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium text-[var(--text-2)] block">
+                        {itemPhotoFile ? itemPhotoFile.name : itemPhotoUrl ? t('photoUrlActive') : 'Choose an image…'}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-3)]">PNG, JPG, WEBP</span>
+                    </div>
+                    <input id="modal-photo-file" type="file" accept="image/*"
+                      onChange={e => setItemPhotoFile(e.target.files[0])}
+                      className="sr-only" />
+                  </label>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[var(--panel-border)] flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-2 bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] text-[var(--text-muted)] font-semibold rounded-lg text-sm transition-colors border border-[var(--input-border)]"
-                >
+              {/* Footer */}
+              <div className="p-6 pt-0 flex gap-3 border-t border-[var(--border)]">
+                <button type="button" onClick={onClose} className="btn-ghost flex-1 py-2.5 text-sm font-semibold">
                   {t('cancel')}
                 </button>
-                <button
-                  id="modal-submit-btn"
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-800 text-white font-semibold rounded-lg text-sm shadow-lg shadow-indigo-500/15 transition-colors flex items-center justify-center"
-                >
-                  {saving
-                    ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : t('commitStock')}
+                <button id="modal-submit-btn" type="submit" disabled={saving}
+                  className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                  {saving && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                  {t('commitStock')}
                 </button>
               </div>
             </form>
 
-            {/* History sidebar */}
-            <div className="w-full md:w-72 bg-[var(--input-bg)] border-t md:border-t-0 md:border-l border-[var(--panel-border)] p-6 flex flex-col">
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--panel-border)] mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">{t('changeLogHistory')}</h3>
-                <button onClick={onClose} className="text-[var(--text-muted-dark)] hover:text-[var(--text-color)]">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            {/* History panel */}
+            <div className="w-full sm:w-64 border-t sm:border-t-0 sm:border-l border-[var(--border)] flex flex-col max-h-72 sm:max-h-none"
+              style={{ background: 'rgba(7,11,28,0.6)' }}>
+              <div className="px-5 py-4 border-b border-[var(--border)]">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-2)]">{t('changeLogHistory')}</h3>
               </div>
 
-              {!editingItem ? (
-                <div className="flex-1 flex items-center justify-center text-center text-[var(--text-muted-dark)] text-xs py-8">
-                  {t('createSKUToLog')}
-                </div>
-              ) : historyLogs.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center text-center text-[var(--text-muted)] text-xs py-8">
-                  {t('noChangesLogged')}
-                </div>
-              ) : (
-                <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-                  {historyLogs.map(log => {
-                    const logDate = log.timestamp?.toDate
-                      ? log.timestamp.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                      : 'Just Now';
-                    return (
-                      <div key={log.id} className="p-3 bg-[var(--panel-bg)] rounded-xl border border-[var(--panel-border)] text-[11px] space-y-1">
-                        <div className="flex items-center justify-between text-indigo-500 font-bold">
-                          <span>{log.action}</span>
-                          <span className="text-[var(--text-color)] bg-indigo-500/20 px-1.5 py-0.5 rounded text-[9px]">{log.quantity} Qty</span>
-                        </div>
-                        <div className="text-[10px] text-[var(--text-muted)] truncate">By: {log.operator}</div>
-                        <div className="text-[9px] text-[var(--text-muted-dark)] text-right">{logDate}</div>
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                {!editingItem ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-6">
+                    <div className="w-8 h-8 rounded-xl bg-[var(--surface-raised)] border border-[var(--border)] flex items-center justify-center mb-2">
+                      <svg className="w-4 h-4 text-[var(--text-3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-[var(--text-3)]">{t('createSKUToLog')}</p>
+                  </div>
+                ) : historyLogs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-6">
+                    <p className="text-xs text-[var(--text-3)]">{t('noChangesLogged')}</p>
+                  </div>
+                ) : (
+                  <div>
+                    {historyLogs.map((log, i) => (
+                      <div key={log.id} className={i === historyLogs.length - 1 ? '[&>div>div:last-child]:hidden' : ''}>
+                        <TimelineEntry log={log} />
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         </div>

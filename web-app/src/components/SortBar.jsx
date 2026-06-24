@@ -1,10 +1,10 @@
 import React from 'react';
 
 const SORT_OPTIONS = [
-  { value: 'name-asc',      label: 'Name A→Z'       },
-  { value: 'name-desc',     label: 'Name Z→A'       },
-  { value: 'qty-desc',      label: 'Qty High→Low'   },
-  { value: 'qty-asc',       label: 'Qty Low→High'   },
+  { value: 'name-asc',  label: 'Name A→Z'     },
+  { value: 'name-desc', label: 'Name Z→A'     },
+  { value: 'qty-desc',  label: 'Qty High→Low' },
+  { value: 'qty-asc',   label: 'Qty Low→High' },
 ];
 
 export default function SortBar({ sortKey, setSortKey }) {
@@ -12,7 +12,7 @@ export default function SortBar({ sortKey, setSortKey }) {
     <select
       value={sortKey}
       onChange={e => setSortKey(e.target.value)}
-      className="glass-input px-3 py-2 rounded-xl text-xs text-[var(--text-color)] focus:outline-none cursor-pointer"
+      className="field px-3 py-2 rounded-xl text-xs font-medium cursor-pointer"
     >
       {SORT_OPTIONS.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
