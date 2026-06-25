@@ -184,7 +184,7 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
       style={{ borderColor: 'var(--border-strong)' }}
     >
       {/* Photo */}
-      <div className="h-44 bg-zinc-800 relative overflow-hidden shrink-0">
+      <div className="h-44 relative overflow-hidden shrink-0" style={{ background: 'var(--surface-raised)' }}>
         <ItemPhoto src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
         {/* Location pill */}
         <div className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-black/55 backdrop-blur-sm rounded-lg border border-white/10 text-[10px] font-bold tracking-wide text-white/85 max-w-[60%] truncate">
