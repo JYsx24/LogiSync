@@ -302,6 +302,12 @@ function AppInner() {
     if (delta === 0) return;
     try {
       await updateDoc(doc(db, 'inventory', itemId), { quantity: increment(delta) });
+      await addDoc(collection(db, 'inventory', itemId, 'history'), {
+        quantity: newQty,
+        timestamp: serverTimestamp(),
+        operator: user.email,
+        action: delta > 0 ? `+${delta}` : `${delta}`,
+      });
     } catch (err) { console.error(err); }
   };
 
