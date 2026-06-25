@@ -248,7 +248,7 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
 
             {/* History panel */}
             <div className="w-full sm:w-64 border-t sm:border-t-0 sm:border-l border-[var(--border)] flex flex-col max-h-72 sm:max-h-none"
-              style={{ background: 'rgba(7,11,28,0.6)' }}>
+              style={{ background: 'var(--surface-raised)' }}>
               <div className="px-5 py-4 border-b border-[var(--border)]">
                 <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-2)]">{t('changeLogHistory')}</h3>
               </div>

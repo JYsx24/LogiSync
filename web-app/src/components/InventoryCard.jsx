@@ -45,66 +45,6 @@ function StockBar({ item }) {
   );
 }
 
-function EditControls({ item, adjustQuantity, openEditModal, handleDeleteItem }) {
-  const [directQty, setDirectQty] = useState('');
-
-  const commitDirectQty = () => {
-    const parsed = parseInt(directQty, 10);
-    if (!isNaN(parsed) && parsed >= 0) {
-      const delta = parsed - item.quantity;
-      if (delta !== 0) adjustQuantity(item.id, delta, parsed);
-    }
-    setDirectQty('');
-  };
-
-  return (
-    <div className="bg-[var(--surface-raised)] rounded-xl p-3 border border-[var(--border-strong)] space-y-2.5">
-      {/* Qty stepper */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => adjustQuantity(item.id, -1)}
-          className="w-8 h-8 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-strong)] flex items-center justify-center text-base font-bold transition-colors"
-        >−</button>
-        <input
-          type="number" min="0"
-          placeholder={String(item.quantity)}
-          value={directQty}
-          onChange={e => setDirectQty(e.target.value)}
-          onBlur={commitDirectQty}
-          onKeyDown={e => e.key === 'Enter' && commitDirectQty()}
-          className="field flex-1 text-center px-2 py-1.5 rounded-xl text-sm font-bold"
-        />
-        <button
-          onClick={() => adjustQuantity(item.id, 1)}
-          className="w-8 h-8 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-strong)] flex items-center justify-center text-base font-bold transition-colors"
-        >+</button>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => openEditModal(item)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-teal-500/20 transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          Edit
-        </button>
-        <button
-          onClick={() => handleDeleteItem(item.id, item.name)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--danger-bg)] text-[var(--danger)] border border-[var(--danger-border)] hover:bg-red-500/20 transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Delete
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function InventoryCard({ item, folders, adjustQuantity, openEditModal, handleDeleteItem, isGridView, t }) {
   const [isEditing, setIsEditing] = useState(false);
   const folderName = folders.find(f => f.id === item.folderId)?.name;
@@ -167,8 +107,36 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
           {isEditing && (
             <motion.div key="list-ctrl" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden">
-              <div className="mx-3 mb-3">
-                <EditControls item={item} adjustQuantity={adjustQuantity} openEditModal={openEditModal} handleDeleteItem={handleDeleteItem} />
+              <div className="mx-3 mb-3 bg-[var(--surface-raised)] rounded-xl p-3 border border-[var(--border-strong)] space-y-2.5">
+                {/* Qty stepper */}
+                <div className="flex items-center gap-2">
+                  <button onClick={() => adjustQuantity(item.id, -1)}
+                    className="w-8 h-8 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-strong)] flex items-center justify-center text-base font-bold transition-colors">
+                    −
+                  </button>
+                  <span className="flex-1 text-center text-sm font-bold text-[var(--text)]">{item.quantity} {t('units')}</span>
+                  <button onClick={() => adjustQuantity(item.id, 1)}
+                    className="w-8 h-8 rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] hover:border-[var(--border-strong)] flex items-center justify-center text-base font-bold transition-colors">
+                    +
+                  </button>
+                </div>
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <button onClick={() => { openEditModal(item); setIsEditing(false); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-teal-500/20 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {t('editingStock')}
+                  </button>
+                  <button onClick={() => handleDeleteItem(item.id, item.name)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--danger-bg)] text-[var(--danger)] border border-[var(--danger-border)] hover:bg-red-500/20 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    {t('deleteStock')}
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -184,66 +152,71 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
       style={{ borderColor: 'var(--border-strong)' }}
     >
       {/* Photo */}
-      <div className="h-44 relative overflow-hidden shrink-0" style={{ background: 'var(--surface-raised)' }}>
+      <div className="h-36 sm:h-44 relative overflow-hidden shrink-0" style={{ background: 'var(--surface-raised)' }}>
         <ItemPhoto src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
-        {/* Location pill */}
-        <div className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-black/55 backdrop-blur-sm rounded-lg border border-white/10 text-[10px] font-bold tracking-wide text-white/85 max-w-[60%] truncate">
+        <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/55 backdrop-blur-sm rounded-lg border border-white/10 text-[9px] font-bold tracking-wide text-white/85 max-w-[55%] truncate">
           {item.location}
         </div>
-        {/* Stock alert overlay */}
         {item.quantity === 0 && (
-          <div className="absolute bottom-2.5 left-2.5 px-2 py-1 bg-red-600/85 backdrop-blur-sm rounded-lg border border-red-400/30 text-[9px] font-bold uppercase tracking-wide text-white">
+          <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-red-600/85 backdrop-blur-sm rounded-lg border border-red-400/30 text-[9px] font-bold uppercase tracking-wide text-white">
             Out of Stock
           </div>
         )}
         {item.quantity > 0 && item.quantity <= (item.lowStockThreshold ?? 5) && (
-          <div className="absolute bottom-2.5 left-2.5 px-2 py-1 bg-amber-500/85 backdrop-blur-sm rounded-lg border border-amber-400/30 text-[9px] font-bold uppercase tracking-wide text-white">
+          <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-amber-500/85 backdrop-blur-sm rounded-lg border border-amber-400/30 text-[9px] font-bold uppercase tracking-wide text-white">
             Low Stock
           </div>
         )}
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex flex-col p-4 gap-3">
-        <div>
-          <h3 className="text-sm font-bold text-[var(--text)] leading-snug mb-1 line-clamp-1">{item.name}</h3>
+      <div className="flex-1 flex flex-col p-3 gap-2">
+        {/* Name + folder */}
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-[var(--text)] leading-snug line-clamp-1">{item.name}</h3>
           {folderName && (
-            <span className="inline-block px-2 py-0.5 rounded-lg bg-[var(--primary-glow)] border border-[var(--primary)]/15 text-[10px] text-[var(--primary)] font-semibold">
+            <span className="inline-block px-2 py-0.5 rounded-lg bg-[var(--primary-glow)] border border-[var(--primary)]/15 text-[10px] text-[var(--primary)] font-semibold mt-1">
               {folderName}
             </span>
           )}
         </div>
 
-        {/* Qty + bar */}
-        <div className="mt-auto pt-3 border-t border-[var(--border)] space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] uppercase tracking-wider text-[var(--text-3)] font-semibold block">{t('inStock')}</span>
-              <span className="text-xl font-black text-[var(--text)]">{item.quantity} <span className="text-xs font-normal text-[var(--text-3)]">{t('units')}</span></span>
+        {/* Qty + actions */}
+        <div className="mt-auto pt-2.5 border-t border-[var(--border)] space-y-2">
+          <div className="flex items-center justify-between gap-1">
+            {/* Inline stepper */}
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => adjustQuantity(item.id, -1)}
+                className="w-6 h-6 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] flex items-center justify-center text-sm font-bold transition-colors shrink-0">
+                −
+              </button>
+              <div className="text-center">
+                <span className="text-base font-black text-[var(--text)] leading-none">{item.quantity}</span>
+                <span className="text-[9px] text-[var(--text-3)] block leading-none">{t('units')}</span>
+              </div>
+              <button onClick={() => adjustQuantity(item.id, 1)}
+                className="w-6 h-6 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--text)] flex items-center justify-center text-sm font-bold transition-colors shrink-0">
+                +
+              </button>
             </div>
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                isEditing
-                  ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-md'
-                  : 'btn-ghost'
-              }`}
-            >
-              {isEditing ? t('closeEdit') : t('editState')}
-            </button>
+            {/* Edit + Delete icons */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => openEditModal(item)} title={t('editState')}
+                className="w-7 h-7 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] hover:text-[var(--primary)] hover:border-[var(--primary)]/40 flex items-center justify-center transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button onClick={() => handleDeleteItem(item.id, item.name)} title={t('deleteStock')}
+                className="w-7 h-7 rounded-lg bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-3)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
           </div>
           <StockBar item={item} />
         </div>
-
-        {/* Edit controls */}
-        <AnimatePresence initial={false}>
-          {isEditing && (
-            <motion.div key="grid-ctrl" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-              <EditControls item={item} adjustQuantity={adjustQuantity} openEditModal={openEditModal} handleDeleteItem={handleDeleteItem} />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );
