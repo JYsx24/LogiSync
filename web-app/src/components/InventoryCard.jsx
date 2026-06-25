@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1553413719-8758712747d5?auto=format&fit=crop&w=300&q=80';
+function ItemPhoto({ src, alt, className }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      <img
+        src={src} alt={alt}
+        className={className}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <svg className="w-10 h-10 opacity-40 text-[var(--text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    </div>
+  );
+}
 
 function StockBadge({ item }) {
   const threshold = item.lowStockThreshold ?? 5;
@@ -66,7 +84,7 @@ function EditControls({ item, adjustQuantity, openEditModal, handleDeleteItem })
       <div className="flex gap-2">
         <button
           onClick={() => openEditModal(item)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-indigo-500/20 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-teal-500/20 transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -96,13 +114,12 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
     return (
       <motion.div layout transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         className="glass rounded-xl overflow-hidden relative"
+        style={{ borderColor: 'var(--border-strong)' }}
       >
         <div className="flex items-center gap-3 p-3 pr-12">
           {/* Thumb */}
           <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-[var(--surface-raised)]">
-            <img src={item.photoUrl || FALLBACK_IMG} alt={item.name}
-              className="w-full h-full object-cover"
-              onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} />
+            <ItemPhoto src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
           </div>
 
           {/* Info */}
@@ -163,13 +180,12 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
   /* ── Grid view ── */
   return (
     <motion.div layout transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      className="glass rounded-2xl overflow-hidden flex flex-col hover:border-[var(--border-strong)] transition-colors duration-300"
+      className="glass rounded-2xl overflow-hidden flex flex-col transition-colors duration-300"
+      style={{ borderColor: 'var(--border-strong)' }}
     >
       {/* Photo */}
-      <div className="h-44 bg-[var(--surface-raised)] relative overflow-hidden shrink-0">
-        <img src={item.photoUrl || FALLBACK_IMG} alt={item.name}
-          className="w-full h-full object-cover"
-          onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} />
+      <div className="h-44 bg-zinc-800 relative overflow-hidden shrink-0">
+        <ItemPhoto src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
         {/* Location pill */}
         <div className="absolute top-2.5 right-2.5 px-2.5 py-1 bg-black/55 backdrop-blur-sm rounded-lg border border-white/10 text-[10px] font-bold tracking-wide text-white/85 max-w-[60%] truncate">
           {item.location}

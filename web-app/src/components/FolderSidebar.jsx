@@ -1,14 +1,56 @@
-import React from 'react';
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import React, { useState } from 'react';
+import { collection, query, where, getDocs, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
 
-function FolderIcon({ className }) {
+export const FOLDER_COLORS = [
+  '#14b8a6', '#38bdf8', '#818cf8', '#a78bfa',
+  '#f472b6', '#fb923c', '#facc15', '#4ade80',
+];
+
+function FolderIcon({ className, style }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className={className} style={style} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
     </svg>
+  );
+}
+
+function ColorSwatch({ currentColor, position, onSelect }) {
+  return (
+    <div
+      className="fixed z-50 p-2.5 rounded-2xl shadow-2xl"
+      style={{
+        top: position.top,
+        left: Math.min(position.left, window.innerWidth - 172),
+        background: 'var(--surface-overlay)',
+        border: '1px solid var(--border-strong)',
+        width: 164,
+      }}
+    >
+      <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">Folder Colour</p>
+      <div className="grid grid-cols-4 gap-1.5">
+        {FOLDER_COLORS.map(c => (
+          <button
+            key={c}
+            onClick={() => onSelect(c)}
+            className="w-7 h-7 rounded-xl transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: c,
+              boxShadow: currentColor === c ? `0 0 0 2px var(--bg), 0 0 0 3.5px ${c}` : 'none',
+            }}
+          />
+        ))}
+      </div>
+      <button
+        onClick={() => onSelect(null)}
+        className="mt-2 w-full py-1.5 rounded-xl text-[10px] font-semibold transition-colors hover:text-[var(--text)]"
+        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-3)' }}
+      >
+        No Colour
+      </button>
+    </div>
   );
 }
 
@@ -18,6 +60,8 @@ export default function FolderSidebar({
 }) {
   const confirm = useConfirm();
   const toast = useToast();
+  const [colorPickerFolderId, setColorPickerFolderId] = useState(null);
+  const [swatchPos, setSwatchPos] = useState({ top: 0, left: 0 });
 
   const handleDeleteFolder = async (folder) => {
     const count = items.filter(i => i.folderId === folder.id).length;
@@ -41,6 +85,24 @@ export default function FolderSidebar({
     }
   };
 
+  const handleColorChange = async (folderId, color) => {
+    try {
+      await updateDoc(doc(db, 'folders', folderId), { color: color ?? null });
+      setColorPickerFolderId(null);
+    } catch (err) {
+      console.error(err);
+      toast('Failed to update colour', 'error');
+    }
+  };
+
+  const openColorPicker = (e, folderId) => {
+    e.stopPropagation();
+    if (colorPickerFolderId === folderId) { setColorPickerFolderId(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSwatchPos({ top: rect.bottom + 6, left: rect.left - 8 });
+    setColorPickerFolderId(folderId);
+  };
+
   const NavButton = ({ id, label, icon, count }) => {
     const active = activeFolderId === id;
     return (
@@ -50,7 +112,7 @@ export default function FolderSidebar({
       >
         {icon}
         <span className="flex-1 truncate">{label}</span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-lg font-semibold ${active ? 'bg-indigo-500/20 text-indigo-300' : 'bg-[var(--input-bg)] text-[var(--text-3)]'}`}>
+        <span className={`text-[10px] px-2 py-0.5 rounded-lg font-semibold ${active ? 'bg-[var(--primary-glow)] text-[var(--primary)]' : 'bg-[var(--input-bg)] text-[var(--text-3)]'}`}>
           {count}
         </span>
       </button>
@@ -58,7 +120,10 @@ export default function FolderSidebar({
   };
 
   return (
-    <aside className="w-full lg:w-60 shrink-0 self-start">
+    <aside
+      className="w-full lg:w-60 shrink-0 lg:self-start lg:sticky transition-[top] duration-200"
+      style={{ top: 'var(--sticky-top, 3.5rem)' }}
+    >
       <div className="glass rounded-2xl p-4 flex flex-col gap-5">
         {/* Header */}
         <div className="flex items-center gap-2">
@@ -88,18 +153,45 @@ export default function FolderSidebar({
               {folders.map(folder => {
                 const count = items.filter(i => i.folderId === folder.id).length;
                 const active = activeFolderId === folder.id;
+                const color = folder.color || null;
+
                 return (
-                  <div key={folder.id} className={`group flex items-center rounded-xl nav-item ${active ? 'active' : ''}`}>
+                  <div
+                    key={folder.id}
+                    className={`group relative flex items-center rounded-xl nav-item ${active ? 'active' : ''}`}
+                    style={active && color ? { background: `${color}18`, color } : {}}
+                  >
+                    {/* Colour dot — click to open swatch */}
+                    <button
+                      onClick={e => openColorPicker(e, folder.id)}
+                      title="Change colour"
+                      className="shrink-0 ml-2.5 w-3 h-3 rounded-full transition-all hover:scale-125 focus:outline-none"
+                      style={{
+                        background: color || 'var(--border-strong)',
+                        boxShadow: color ? `0 0 5px ${color}70` : 'none',
+                      }}
+                    />
+
                     <button
                       onClick={() => setActiveFolderId(folder.id)}
-                      className="flex-1 flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium truncate"
+                      className="flex-1 flex items-center gap-2.5 px-2.5 py-2.5 text-sm font-medium truncate"
                     >
-                      <FolderIcon className="w-3.5 h-3.5 shrink-0" />
+                      <FolderIcon className="w-3.5 h-3.5 shrink-0" style={color ? { color } : {}} />
                       <span className="truncate">{folder.name}</span>
-                      <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-lg font-semibold shrink-0 ${active ? 'bg-indigo-500/20 text-indigo-300' : 'bg-[var(--input-bg)] text-[var(--text-3)]'}`}>
+                      <span
+                        className="ml-auto text-[10px] px-2 py-0.5 rounded-lg font-semibold shrink-0"
+                        style={
+                          active && color
+                            ? { background: `${color}25`, color }
+                            : active
+                            ? { background: 'var(--primary-glow)', color: 'var(--primary)' }
+                            : { background: 'var(--input-bg)', color: 'var(--text-3)' }
+                        }
+                      >
                         {count}
                       </span>
                     </button>
+
                     <button
                       onClick={() => handleDeleteFolder(folder)}
                       className="mr-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 text-[var(--text-3)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] transition-all"
@@ -119,12 +211,12 @@ export default function FolderSidebar({
         {/* New folder form */}
         <div className="border-t border-[var(--border)] pt-4">
           <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">{t('createNewFolder')}</label>
-          <form onSubmit={handleCreateFolder} className="flex gap-2">
+          <form onSubmit={handleCreateFolder} className="flex gap-2 min-w-0">
             <input
               id="new-folder-input" type="text"
               placeholder={t('folderPlaceholder')}
               value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
-              className="field flex-1 px-3 py-2 text-xs rounded-xl"
+              className="field flex-1 min-w-0 px-3 py-2 text-xs rounded-xl"
             />
             <button
               id="create-folder-btn" type="submit"
@@ -137,6 +229,18 @@ export default function FolderSidebar({
           </form>
         </div>
       </div>
+
+      {/* Colour swatch portal — fixed so it escapes overflow:auto */}
+      {colorPickerFolderId && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setColorPickerFolderId(null)} />
+          <ColorSwatch
+            currentColor={folders.find(f => f.id === colorPickerFolderId)?.color || null}
+            position={swatchPos}
+            onSelect={c => handleColorChange(colorPickerFolderId, c)}
+          />
+        </>
+      )}
     </aside>
   );
 }

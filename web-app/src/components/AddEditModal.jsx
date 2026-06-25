@@ -46,11 +46,11 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
 
   const [itemName, setItemName] = useState('');
   const [itemLocation, setItemLocation] = useState('');
-  const [itemQuantity, setItemQuantity] = useState(0);
+  const [itemQuantity, setItemQuantity] = useState('');
   const [itemPhotoFile, setItemPhotoFile] = useState(null);
   const [itemPhotoUrl, setItemPhotoUrl] = useState('');
   const [itemFolderId, setItemFolderId] = useState('');
-  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+  const [lowStockThreshold, setLowStockThreshold] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyLogs, setHistoryLogs] = useState([]);
 
@@ -59,19 +59,19 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
     if (editingItem) {
       setItemName(editingItem.name);
       setItemLocation(editingItem.location);
-      setItemQuantity(editingItem.quantity);
+      setItemQuantity('');
       setItemPhotoFile(null);
       setItemPhotoUrl(editingItem.photoUrl || '');
       setItemFolderId(editingItem.folderId || '');
-      setLowStockThreshold(editingItem.lowStockThreshold ?? 5);
+      setLowStockThreshold('');
     } else {
       setItemName('');
       setItemLocation('');
-      setItemQuantity(0);
+      setItemQuantity('');
       setItemPhotoFile(null);
       setItemPhotoUrl('');
       setItemFolderId(activeFolderId !== 'all' && activeFolderId !== 'uncategorized' ? activeFolderId : '');
-      setLowStockThreshold(5);
+      setLowStockThreshold('');
     }
   }, [isOpen, editingItem, activeFolderId]);
 
@@ -102,19 +102,22 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       let photoUrlToSave = itemPhotoUrl;
       if (itemPhotoFile) photoUrlToSave = await uploadImage(itemPhotoFile);
 
+      const qtyToSave = itemQuantity !== '' ? Number(itemQuantity) : (editingItem?.quantity ?? 0);
+      const thresholdToSave = lowStockThreshold !== '' ? Number(lowStockThreshold) : (editingItem?.lowStockThreshold ?? 5);
+
       const data = {
-        name: itemName, location: itemLocation, quantity: Number(itemQuantity),
-        photoUrl: photoUrlToSave || 'https://images.unsplash.com/photo-1553413719-8758712747d5?auto=format&fit=crop&w=300&q=80',
-        folderId: itemFolderId, lowStockThreshold: Number(lowStockThreshold), uid: user.uid,
+        name: itemName, location: itemLocation, quantity: qtyToSave,
+        photoUrl: photoUrlToSave || '',
+        folderId: itemFolderId, lowStockThreshold: thresholdToSave, uid: user.uid,
       };
 
       if (editingItem) {
         await updateDoc(doc(db, 'inventory', editingItem.id), data);
-        await logChange(editingItem.id, itemQuantity, 'Details Modified');
+        await logChange(editingItem.id, qtyToSave, 'Details Modified');
         toast('Stock updated');
       } else {
         const newRef = await addDoc(collection(db, 'inventory'), data);
-        await logChange(newRef.id, itemQuantity, 'SKU Registered');
+        await logChange(newRef.id, qtyToSave, 'SKU Registered');
         toast('Stock registered');
       }
       onClose();
@@ -183,13 +186,15 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <FieldLabel>{t('quantity')}</FieldLabel>
-                    <input id="modal-quantity-input" type="number" required min="0"
+                    <input id="modal-quantity-input" type="number" min="0"
+                      placeholder={editingItem ? String(editingItem.quantity) : '0'}
                       value={itemQuantity} onChange={e => setItemQuantity(e.target.value)}
                       className="field w-full px-4 py-2.5 text-sm" />
                   </div>
                   <div>
                     <FieldLabel>{t('lowStockThreshold')}</FieldLabel>
                     <input type="number" min="0"
+                      placeholder={editingItem ? String(editingItem.lowStockThreshold ?? 5) : '5'}
                       value={lowStockThreshold} onChange={e => setLowStockThreshold(e.target.value)}
                       className="field w-full px-4 py-2.5 text-sm" />
                   </div>

@@ -3,60 +3,63 @@
 
 /* ── Design tokens ─────────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --bg:              #020617;
-  --surface:         rgba(15, 23, 42, 0.60);
-  --surface-raised:  rgba(30, 41, 59, 0.75);
-  --surface-overlay: rgba(7, 11, 28, 0.97);
-  --header:          rgba(2, 6, 23, 0.55);
+  /* Layout — updated by scroll handler in App.jsx */
+  --header-h:        3.5rem;
+
+  /* Backgrounds — neutral zinc-black, not blue-tinted */
+  --bg:              #09090b;
+  --surface:         rgba(24, 24, 27, 0.95);
+  --surface-raised:  rgba(32, 32, 36, 0.97);
+  --surface-overlay: rgba(12, 12, 14, 0.99);
+  --header:          rgba(9, 9, 11, 0.88);
 
   /* Borders */
-  --border:          rgba(255, 255, 255, 0.07);
-  --border-strong:   rgba(255, 255, 255, 0.13);
+  --border:          rgba(255, 255, 255, 0.09);
+  --border-strong:   rgba(255, 255, 255, 0.16);
 
   /* Text */
-  --text:            #f1f5f9;
-  --text-2:          #94a3b8;
-  --text-3:          #475569;
+  --text:            #fafafa;
+  --text-2:          #a1a1aa;
+  --text-3:          #52525b;
 
   /* Inputs */
-  --input-bg:        rgba(15, 23, 42, 0.70);
-  --input-border:    rgba(255, 255, 255, 0.09);
+  --input-bg:        rgba(24, 24, 27, 0.90);
+  --input-border:    rgba(255, 255, 255, 0.10);
 
-  /* Brand */
-  --primary:         #6366f1;
-  --primary-dark:    #4f46e5;
-  --primary-glow:    rgba(99, 102, 241, 0.25);
+  /* Brand — teal: precision/logistics feel, distinct from all semantic colors */
+  --primary:         #14b8a6;
+  --primary-dark:    #0d9488;
+  --primary-glow:    rgba(20, 184, 166, 0.22);
 
   /* Semantic */
-  --success:         #10b981;
-  --success-bg:      rgba(16, 185, 129, 0.12);
-  --success-border:  rgba(16, 185, 129, 0.25);
+  --success:         #22c55e;
+  --success-bg:      rgba(34, 197, 94, 0.11);
+  --success-border:  rgba(34, 197, 94, 0.24);
   --warning:         #f59e0b;
-  --warning-bg:      rgba(245, 158, 11, 0.12);
-  --warning-border:  rgba(245, 158, 11, 0.25);
-  --danger:          #ef4444;
-  --danger-bg:       rgba(239, 68, 68, 0.12);
-  --danger-border:   rgba(239, 68, 68, 0.25);
+  --warning-bg:      rgba(245, 158, 11, 0.11);
+  --warning-border:  rgba(245, 158, 11, 0.24);
+  --danger:          #f43f5e;
+  --danger-bg:       rgba(244, 63, 94, 0.11);
+  --danger-border:   rgba(244, 63, 94, 0.24);
 }
 
 .light {
-  --bg:              #f1f5f9;
-  --surface:         rgba(255, 255, 255, 0.82);
-  --surface-raised:  rgba(255, 255, 255, 0.95);
+  --bg:              #fafafa;
+  --surface:         rgba(255, 255, 255, 0.92);
+  --surface-raised:  rgba(255, 255, 255, 0.98);
   --surface-overlay: rgba(255, 255, 255, 0.99);
-  --header:          rgba(241, 245, 249, 0.70);
-  --border:          rgba(15, 23, 42, 0.07);
-  --border-strong:   rgba(15, 23, 42, 0.13);
-  --text:            #0f172a;
-  --text-2:          #475569;
-  --text-3:          #94a3b8;
-  --input-bg:        rgba(241, 245, 249, 0.90);
-  --input-border:    rgba(15, 23, 42, 0.11);
-  --primary-glow:    rgba(99, 102, 241, 0.15);
-  --success-bg:      rgba(16, 185, 129, 0.08);
+  --header:          rgba(250, 250, 250, 0.85);
+  --border:          rgba(9, 9, 11, 0.08);
+  --border-strong:   rgba(9, 9, 11, 0.14);
+  --text:            #09090b;
+  --text-2:          #52525b;
+  --text-3:          #a1a1aa;
+  --input-bg:        rgba(244, 244, 245, 0.90);
+  --input-border:    rgba(9, 9, 11, 0.11);
+  --primary-glow:    rgba(20, 184, 166, 0.15);
+  --success-bg:      rgba(34, 197, 94, 0.08);
   --warning-bg:      rgba(245, 158, 11, 0.08);
-  --danger-bg:       rgba(239, 68, 68, 0.08);
+  --danger-bg:       rgba(244, 63, 94, 0.08);
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
@@ -81,17 +84,19 @@ body {
 /* ── Glass surface ──────────────────────────────────────────── */
 .glass {
   background: var(--surface);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid var(--border);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
   transition: background 0.2s, border-color 0.2s;
 }
 
 .glass-raised {
   background: var(--surface-raised);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
 }
 
 /* ── Input ──────────────────────────────────────────────────── */
@@ -109,17 +114,17 @@ body {
 }
 .field::placeholder { color: var(--text-3); }
 
-/* ── Primary button ─────────────────────────────────────────── */
+/* ── Primary button — dark text required for teal background ── */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #7c3aed);
-  color: #fff;
-  font-weight: 600;
+  background: linear-gradient(135deg, #14b8a6, #0891b2);
+  color: #09090b;
+  font-weight: 700;
   border-radius: 0.75rem;
   border: none;
   transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
   box-shadow: 0 4px 20px var(--primary-glow);
 }
-.btn-primary:hover  { opacity: 0.92; box-shadow: 0 6px 28px var(--primary-glow); }
+.btn-primary:hover  { opacity: 0.90; box-shadow: 0 6px 28px var(--primary-glow); }
 .btn-primary:active { transform: scale(0.97); }
 
 /* ── Ghost button ───────────────────────────────────────────── */
@@ -160,17 +165,16 @@ body {
   transition: background 0.15s, color 0.15s;
   color: var(--text-2);
 }
-.nav-item:hover  { background: var(--surface-raised); color: var(--text); }
+.nav-item:hover { background: var(--surface-raised); color: var(--text); }
 .nav-item.active {
-  background: rgba(99, 102, 241, 0.14);
-  color: #a5b4fc;
-  border-left: 2px solid var(--primary);
+  background: var(--surface-raised);
+  color: var(--primary);
 }
 
 /* ── Misc ───────────────────────────────────────────────────── */
 .divider { border-color: var(--border); }
 
-/* Legacy compat — keep old class names working during transition */
-.glass-panel { background: var(--surface); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); border: 1px solid var(--border); transition: background 0.2s, border-color 0.2s; }
+/* Legacy compat */
+.glass-panel { background: var(--surface); backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); border: 1px solid var(--border); box-shadow: 0 2px 16px rgba(0,0,0,0.45); transition: background 0.2s, border-color 0.2s; }
 .glass-input  { background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; }
 .glass-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); outline: none; }

@@ -18,21 +18,12 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-const isLocalhost =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1" ||
-  window.location.hostname === "::1" ||
-  window.location.hostname === "[::1]";
-
-const forceProduction = localStorage.getItem("USE_PRODUCTION_FIREBASE") === "true";
-
-if (isLocalhost && !forceProduction) {
-  console.warn("Using Firebase Local Emulator Suite for development stability.");
+// Only connect to emulators when explicitly opted in via VITE_USE_EMULATORS=true
+if (import.meta.env.VITE_USE_EMULATORS === "true") {
+  console.warn("Emulator mode active — do not use production credentials.");
   connectAuthEmulator(auth, "http://localhost:9099");
   connectFirestoreEmulator(db, "localhost", 8080);
   connectStorageEmulator(storage, "localhost", 9199);
-} else {
-  console.log("Connecting directly to production Cloud Firebase services.");
 }
 
 export { auth, db, storage };
