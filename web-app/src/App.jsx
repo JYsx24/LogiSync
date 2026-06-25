@@ -134,6 +134,29 @@ function FeatureBullet({ icon, label }) {
   );
 }
 
+/* ── Mobile folder chip ───────────────────────────────────── */
+function FolderChip({ label, count, color, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+      style={active ? {
+        background: color ? `${color}22` : 'var(--primary-glow)',
+        color: color || 'var(--primary)',
+        borderColor: color ? `${color}55` : 'var(--primary)',
+      } : {
+        background: 'transparent',
+        color: 'var(--text-2)',
+        borderColor: 'var(--border)',
+      }}
+    >
+      {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
+      <span className="max-w-[72px] truncate">{label}</span>
+      <span style={{ opacity: 0.55, fontWeight: 400 }}>{count}</span>
+    </button>
+  );
+}
+
 /* ── Nav tab ──────────────────────────────────────────────── */
 function NavTab({ label, active, onClick }) {
   return (
@@ -588,6 +611,22 @@ function AppInner() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile folder strip — sticky, only on dashboard */}
+      {currentTab === 'dashboard' && (
+        <div
+          className="lg:hidden sticky z-20 border-b border-[var(--border)]"
+          style={{ top: 'var(--header-h)', background: 'var(--header)', backdropFilter: 'blur(20px) saturate(160%)', WebkitBackdropFilter: 'blur(20px) saturate(160%)' }}
+        >
+          <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <FolderChip label={t('allStock')} count={items.length} color={null} active={activeFolderId === 'all'} onClick={() => setActiveFolderId('all')} />
+            <FolderChip label={t('uncategorized')} count={items.filter(i => !i.folderId).length} color={null} active={activeFolderId === 'uncategorized'} onClick={() => setActiveFolderId('uncategorized')} />
+            {folders.map(f => (
+              <FolderChip key={f.id} label={f.name} count={items.filter(i => i.folderId === f.id).length} color={f.color} active={activeFolderId === f.id} onClick={() => setActiveFolderId(f.id)} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main */}
       <main className="flex-1 max-w-screen-xl w-full mx-auto px-4 sm:px-6 py-6">
