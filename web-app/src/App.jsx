@@ -20,6 +20,7 @@ import InventoryCard from './components/InventoryCard';
 import AddEditModal from './components/AddEditModal';
 import ItemDetailView from './components/ItemDetailView';
 import ProfileSettings from './components/ProfileSettings';
+import TutorialModal from './components/TutorialModal';
 
 const translations = {
   en: {
@@ -97,6 +98,24 @@ const translations = {
     pwRuleSpecial: 'Special character (!@#$...)',
     pwStrengthWeak: 'Weak', pwStrengthFair: 'Fair', pwStrengthGood: 'Good', pwStrengthStrong: 'Strong',
     pwMatch: 'Passwords match',
+    // Tutorial
+    tutorialStep1Title: 'Welcome to LogiSync!',
+    tutorialStep1Desc: 'Your cloud-based inventory system is ready. Here\'s a quick tour of the core workflow to get you up and running.',
+    tutorialStep2Title: 'Add Your Items',
+    tutorialStep2Desc: 'Register inventory items with a name, location, quantity, price, SKU, and optional photo. All data syncs to the cloud instantly.',
+    tutorialStep2Hint: 'Tap "Add Stock" in the top bar to create your first item.',
+    tutorialStep3Title: 'Organize with Folders',
+    tutorialStep3Desc: 'Create custom folders to group items by category, product line, or warehouse section. Drag-filter using the sidebar.',
+    tutorialStep3Hint: 'Use the sidebar on the left to create and switch folders.',
+    tutorialStep4Title: 'Adjust Stock Levels',
+    tutorialStep4Desc: 'Click any item card to open its detail view. Use the +/− stepper to stage a quantity change, then confirm to write it — every change is logged with a timestamp.',
+    tutorialStep4Hint: 'Click any item card to open its detail view.',
+    tutorialStep5Title: 'Monitor Your Dashboard',
+    tutorialStep5Desc: 'The Dashboard gives you a real-time overview: total SKUs, units in stock, low-stock alerts, and out-of-stock counts — all updated live.',
+    tutorialStep5Hint: 'Switch to Dashboard in the navigation to see live stats.',
+    tutorialStepOf: 'Step {n} of {total}',
+    tutorialDontShow: "Don't show this again",
+    tutorialNext: 'Next', tutorialPrev: 'Back', tutorialFinish: 'Get Started',
   },
   zh: {
     dashboard: '仪表板', profile: '个人资料', settings: '设置', logout: '退出',
@@ -173,6 +192,24 @@ const translations = {
     pwRuleSpecial: '特殊字符 (!@#$...)',
     pwStrengthWeak: '弱', pwStrengthFair: '一般', pwStrengthGood: '良好', pwStrengthStrong: '强',
     pwMatch: '密码匹配',
+    // Tutorial
+    tutorialStep1Title: '欢迎使用 LogiSync！',
+    tutorialStep1Desc: '您的云端库存系统已就绪。以下是核心工作流程的快速导览，帮助您快速上手。',
+    tutorialStep2Title: '添加商品',
+    tutorialStep2Desc: '注册库存商品，填写名称、位置、数量、价格、SKU，并可上传图片。所有数据即时同步至云端。',
+    tutorialStep2Hint: '点击顶部栏的"添加库存"创建第一件商品。',
+    tutorialStep3Title: '文件夹分类管理',
+    tutorialStep3Desc: '创建自定义文件夹，按类别、产品线或仓库区域对商品分组，通过侧边栏快速筛选。',
+    tutorialStep3Hint: '使用左侧边栏创建和切换文件夹。',
+    tutorialStep4Title: '调整库存数量',
+    tutorialStep4Desc: '点击任意商品卡片打开详情视图。使用 +/− 步进器暂存数量变更，确认后写入——每次变更均会记录时间戳。',
+    tutorialStep4Hint: '点击任意商品卡片打开详情视图。',
+    tutorialStep5Title: '监控仪表板',
+    tutorialStep5Desc: '仪表板提供实时概览：总SKU数、库存量、低库存预警和缺货商品数量——所有数据实时更新。',
+    tutorialStep5Hint: '点击导航栏中的"仪表板"查看实时统计。',
+    tutorialStepOf: '第 {n} 步，共 {total} 步',
+    tutorialDontShow: '不再显示',
+    tutorialNext: '下一步', tutorialPrev: '返回', tutorialFinish: '开始使用',
   },
 };
 
@@ -238,6 +275,7 @@ function AppInner() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('logisync_tutorial_seen') !== 'true');
 
   const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
 
@@ -692,6 +730,11 @@ function AppInner() {
 
   return (
     <div className="min-h-screen flex text-[var(--text)]" style={{ background: 'var(--bg)' }}>
+      <AnimatePresence>
+        {showTutorial && (
+          <TutorialModal onClose={() => setShowTutorial(false)} t={t} />
+        )}
+      </AnimatePresence>
       <Sidebar
         user={user}
         displayName={displayName}
