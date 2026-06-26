@@ -53,33 +53,32 @@ export default function ProfileSettings({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const displayRole = 'Admin';
   const [emailValue] = useState(user.email);
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) { toast('Passwords do not match', 'error'); return; }
-    if (newPassword.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+    if (newPassword !== confirmPassword) { toast(t('passwordMismatch'), 'error'); return; }
+    if (newPassword.length < 6) { toast(t('passwordTooShort'), 'error'); return; }
     setChangingPassword(true);
     try {
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, newPassword);
-      toast('Password updated successfully');
+      toast(t('passwordUpdated'));
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
     } catch (err) {
-      toast(err.code === 'auth/wrong-password' ? 'Current password is incorrect' : 'Failed to update password', 'error');
+      toast(err.code === 'auth/wrong-password' ? t('wrongPassword') : t('failedUpdatePassword'), 'error');
     } finally { setChangingPassword(false); }
   };
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold text-[var(--text)]">Profile & Settings</h1>
+      <h1 className="text-2xl font-bold text-[var(--text)]">{t('profileAndSettings')}</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* User Profile */}
         <div className="glass rounded-2xl p-6 flex flex-col gap-5">
-          <h2 className="text-sm font-bold text-[var(--text)]">User Profile</h2>
+          <h2 className="text-sm font-bold text-[var(--text)]">{t('userProfile')}</h2>
 
           {/* Avatar */}
           <div className="flex flex-col items-center gap-3 py-2">
@@ -91,20 +90,20 @@ export default function ProfileSettings({
 
           {/* Fields */}
           <div className="flex flex-col gap-4">
-            <EditableField label="Name" value={profileName} onChange={setProfileName} />
-            <EditableField label="Email" value={emailValue} onChange={() => {}} disabled={true} type="email" />
-            <EditableField label="Role" value={displayRole} onChange={() => {}} disabled={true} />
+            <EditableField label={t('nameLabel')} value={profileName} onChange={setProfileName} />
+            <EditableField label={t('registeredEmail')} value={emailValue} onChange={() => {}} disabled={true} type="email" />
+            <EditableField label={t('role')} value={t('admin')} onChange={() => {}} disabled={true} />
           </div>
         </div>
 
         {/* Notification Preferences */}
         <div className="glass rounded-2xl p-6 flex flex-col gap-5">
-          <h2 className="text-sm font-bold text-[var(--text)]">Notification Preferences</h2>
+          <h2 className="text-sm font-bold text-[var(--text)]">{t('notificationPrefs')}</h2>
           <div className="flex flex-col gap-5">
             {[
-              { label: 'Stock Alerts', value: notifStockAlerts, setter: setNotifStockAlerts },
-              { label: 'Low Stock Warnings', value: notifLowStock, setter: setNotifLowStock },
-              { label: 'System Updates', value: notifSystemUpdates, setter: setNotifSystemUpdates },
+              { label: t('stockAlerts'), value: notifStockAlerts, setter: setNotifStockAlerts },
+              { label: t('lowStockWarnings'), value: notifLowStock, setter: setNotifLowStock },
+              { label: t('systemUpdates'), value: notifSystemUpdates, setter: setNotifSystemUpdates },
             ].map(({ label, value, setter }) => (
               <div key={label} className="flex items-center justify-between">
                 <span className="text-sm text-[var(--text-2)] font-medium">{label}</span>
@@ -116,9 +115,9 @@ export default function ProfileSettings({
           {/* Appearance + Language */}
           <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-4">
             <div>
-              <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">Appearance</p>
+              <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">{t('themeLabel')}</p>
               <div className="grid grid-cols-2 gap-2">
-                {[['dark', '🌙 Dark'], ['light', '☀️ Light']].map(([val, label]) => (
+                {[['dark', `🌙 ${t('darkMode')}`], ['light', `☀️ ${t('lightMode')}`]].map(([val, label]) => (
                   <button key={val} onClick={() => setTheme(val)}
                     className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${theme === val ? 'bg-[var(--primary)] text-[#09090b]' : 'btn-ghost'}`}>
                     {label}
@@ -127,9 +126,9 @@ export default function ProfileSettings({
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">Language</p>
+              <p className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">{t('langLabel')}</p>
               <div className="grid grid-cols-2 gap-2">
-                {[['en', 'English'], ['zh', '中文']].map(([val, label]) => (
+                {[['en', t('english')], ['zh', t('chinese')]].map(([val, label]) => (
                   <button key={val} onClick={() => setLanguage(val)}
                     className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${language === val ? 'bg-[var(--primary)] text-[#09090b]' : 'btn-ghost'}`}>
                     {label}
@@ -142,22 +141,22 @@ export default function ProfileSettings({
 
         {/* Security */}
         <div className="glass rounded-2xl p-6 flex flex-col gap-5">
-          <h2 className="text-sm font-bold text-[var(--text)]">Security</h2>
+          <h2 className="text-sm font-bold text-[var(--text)]">{t('security')}</h2>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">Current Password</label>
+              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">{t('currentPassword')}</label>
               <input type="password" placeholder="••••••••"
                 value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
                 className="field w-full px-4 py-2.5 text-sm" autoComplete="current-password" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">New Password</label>
+              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">{t('newPassword')}</label>
               <input type="password" placeholder="••••••••"
                 value={newPassword} onChange={e => setNewPassword(e.target.value)}
                 className="field w-full px-4 py-2.5 text-sm" autoComplete="new-password" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">Confirm Password</label>
+              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">{t('confirmPasswordLabel')}</label>
               <input type="password" placeholder="••••••••"
                 value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                 className="field w-full px-4 py-2.5 text-sm" autoComplete="new-password" />
@@ -165,7 +164,7 @@ export default function ProfileSettings({
             <button type="submit" disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
               className="btn-primary py-2.5 text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 mt-auto">
               {changingPassword && <span className="w-3.5 h-3.5 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
-              Update Password
+              {t('updatePassword')}
             </button>
           </form>
         </div>
@@ -176,7 +175,7 @@ export default function ProfileSettings({
         disabled={savingProfile}
         className="btn-primary w-full py-3.5 text-base font-bold disabled:opacity-60 flex items-center justify-center gap-2">
         {savingProfile && <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
-        Save Changes
+        {savingProfile ? t('savingProfile') : t('saveProfile')}
       </button>
     </div>
   );

@@ -58,6 +58,38 @@ const translations = {
     exportCSV: 'Export CSV',
     statTotalSKUs: 'Total SKUs', statTotalUnits: 'Total Units',
     statLowStock: 'Low Stock', statOutOfStock: 'Out of Stock',
+    // Profile & Settings
+    profileAndSettings: 'Profile & Settings', userProfile: 'User Profile',
+    nameLabel: 'Name', role: 'Role', admin: 'Admin',
+    notificationPrefs: 'Notification Preferences',
+    stockAlerts: 'Stock Alerts', lowStockWarnings: 'Low Stock Warnings', systemUpdates: 'System Updates',
+    security: 'Security', currentPassword: 'Current Password',
+    newPassword: 'New Password', confirmPasswordLabel: 'Confirm Password',
+    updatePassword: 'Update Password', passwordMismatch: 'Passwords do not match',
+    passwordTooShort: 'Password must be at least 6 characters',
+    passwordUpdated: 'Password updated', wrongPassword: 'Current password is incorrect',
+    failedUpdatePassword: 'Failed to update password',
+    // Item detail
+    noHistoryYet: 'Not enough history to chart yet.',
+    inventoryBreadcrumb: 'Inventory', itemDetails: 'Item Details',
+    category: 'Category', price: 'Price', currentStockLabel: 'Current Stock',
+    pendingLabel: 'pending', confirm: 'Confirm',
+    stockHistory: 'Stock History', editItem: 'Edit Item', transferStock: 'Transfer Stock',
+    stockChartLabel: 'Stock',
+    // Sidebar folders
+    folderColour: 'Folder Colour', noColour: 'No Colour',
+    folderDeleteConfirm: 'Delete folder "{name}"?',
+    folderDeleteConfirmItems: 'Delete "{name}"? {count} item(s) will become uncategorized.',
+    folderDeleted: 'Folder deleted', failedDeleteFolder: 'Failed to delete folder',
+    failedUpdateColour: 'Failed to update colour',
+    // Auth page strings
+    signInTitle: 'Sign In', accessInventory: 'Access your cloud inventory.',
+    rememberMe: 'Remember me', emailLabel: 'Email', passwordLabel: 'Password',
+    fullNameLabel: 'Full Name', confirmPasswordLabel2: 'Confirm Password',
+    backToLogin: 'Back to Login',
+    loginTagline: 'Smart inventory,\nsimplified.',
+    loginSubtext: 'Real-time cloud sync across all your devices.',
+    registerSubtext: 'Start managing your inventory in minutes.',
   },
   zh: {
     dashboard: '仪表板', profile: '个人资料', settings: '设置', logout: '退出',
@@ -95,6 +127,38 @@ const translations = {
     exportCSV: '导出CSV',
     statTotalSKUs: '商品总数', statTotalUnits: '总库存量',
     statLowStock: '低库存', statOutOfStock: '缺货',
+    // Profile & Settings
+    profileAndSettings: '个人资料与设置', userProfile: '用户资料',
+    nameLabel: '姓名', role: '角色', admin: '管理员',
+    notificationPrefs: '通知偏好',
+    stockAlerts: '库存提醒', lowStockWarnings: '低库存预警', systemUpdates: '系统更新',
+    security: '安全设置', currentPassword: '当前密码',
+    newPassword: '新密码', confirmPasswordLabel: '确认密码',
+    updatePassword: '更新密码', passwordMismatch: '两次输入的密码不一致',
+    passwordTooShort: '密码至少需要6个字符',
+    passwordUpdated: '密码更新成功', wrongPassword: '当前密码不正确',
+    failedUpdatePassword: '密码更新失败',
+    // Item detail
+    noHistoryYet: '暂无足够历史记录以生成图表。',
+    inventoryBreadcrumb: '库存列表', itemDetails: '商品详情',
+    category: '分类', price: '价格', currentStockLabel: '当前库存',
+    pendingLabel: '待确认', confirm: '确认',
+    stockHistory: '库存历史', editItem: '编辑商品', transferStock: '转移库存',
+    stockChartLabel: '库存',
+    // Sidebar folders
+    folderColour: '文件夹颜色', noColour: '无颜色',
+    folderDeleteConfirm: '确认删除文件夹"{name}"？',
+    folderDeleteConfirmItems: '删除"{name}"？{count}个商品将变为未分类。',
+    folderDeleted: '文件夹已删除', failedDeleteFolder: '文件夹删除失败',
+    failedUpdateColour: '颜色更新失败',
+    // Auth page strings
+    signInTitle: '登录', accessInventory: '访问您的云端库存。',
+    rememberMe: '记住我', emailLabel: '电子邮箱', passwordLabel: '密码',
+    fullNameLabel: '全名', confirmPasswordLabel2: '确认密码',
+    backToLogin: '返回登录',
+    loginTagline: '智能库存，\n化繁为简。',
+    loginSubtext: '跨设备实时云端同步。',
+    registerSubtext: '几分钟内开始管理您的库存。',
   },
 };
 
@@ -199,7 +263,7 @@ function AppInner() {
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError('');
-    if (isSignUp && password !== confirmPassword) { setAuthError('Passwords do not match'); return; }
+    if (isSignUp && password !== confirmPassword) { setAuthError(t('passwordMismatch')); return; }
     setAuthLoading(true);
     try {
       if (isSignUp) {
@@ -301,7 +365,7 @@ function AppInner() {
             <div className="hidden lg:flex flex-col gap-5">
               <LogoMark size={52} />
               <h1 className="text-5xl font-black text-white leading-tight">Join<br/>LogiSync</h1>
-              <p className="text-base text-white/40 font-medium max-w-[220px]">Start managing your inventory in minutes.</p>
+              <p className="text-base text-white/40 font-medium max-w-[220px]">{t('registerSubtext')}</p>
             </div>
 
             {/* Form card */}
@@ -317,10 +381,10 @@ function AppInner() {
 
               <form onSubmit={handleAuth} className="flex flex-col gap-4">
                 {[
-                  { label: 'Full Name', value: fullName, setter: setFullName, type: 'text', ph: 'Your full name', id: 'reg-name' },
-                  { label: 'Email', value: email, setter: setEmail, type: 'email', ph: 'you@company.com', id: 'reg-email' },
-                  { label: 'Password', value: password, setter: setPassword, type: 'password', ph: '••••••••', id: 'reg-pw', auto: 'new-password' },
-                  { label: 'Confirm Password', value: confirmPassword, setter: setConfirmPassword, type: 'password', ph: '••••••••', id: 'reg-cpw', auto: 'new-password' },
+                  { label: t('fullNameLabel'), value: fullName, setter: setFullName, type: 'text', ph: t('fullNameLabel'), id: 'reg-name' },
+                  { label: t('emailLabel'), value: email, setter: setEmail, type: 'email', ph: 'you@company.com', id: 'reg-email' },
+                  { label: t('passwordLabel'), value: password, setter: setPassword, type: 'password', ph: '••••••••', id: 'reg-pw', auto: 'new-password' },
+                  { label: t('confirmPasswordLabel'), value: confirmPassword, setter: setConfirmPassword, type: 'password', ph: '••••••••', id: 'reg-cpw', auto: 'new-password' },
                 ].map(({ label, value, setter, type, ph, id, auto }) => (
                   <div key={id}>
                     <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5">{label}</label>
@@ -340,14 +404,14 @@ function AppInner() {
                 <button id="auth-submit-btn" type="submit" disabled={authLoading}
                   className="btn-primary w-full py-3 text-sm mt-1 disabled:opacity-60 flex items-center justify-center gap-2">
                   {authLoading && <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
-                  Create Account
+                  {t('signupSubmit')}
                 </button>
               </form>
 
               <div className="text-center">
                 <button onClick={() => { setIsSignUp(false); setAuthError(''); }}
                   className="text-xs text-white/40 hover:text-[var(--primary)] transition-colors font-medium">
-                  Back to Login
+                  {t('backToLogin')}
                 </button>
               </div>
             </motion.div>
@@ -414,8 +478,8 @@ function AppInner() {
 
           {/* Tagline */}
           <div className="relative">
-            <h2 className="text-3xl font-black text-white mb-2 leading-tight">Smart inventory,<br/>simplified.</h2>
-            <p className="text-sm text-white/40">Real-time cloud sync across all your devices.</p>
+            <h2 className="text-3xl font-black text-white mb-2 leading-tight" style={{ whiteSpace: 'pre-line' }}>{t('loginTagline')}</h2>
+            <p className="text-sm text-white/40">{t('loginSubtext')}</p>
           </div>
         </div>
 
@@ -429,23 +493,23 @@ function AppInner() {
               <span className="text-[var(--text)] font-bold text-base tracking-tight">LogiSync</span>
             </div>
 
-            <h2 className="text-2xl font-bold text-[var(--text)] mb-1">Sign In</h2>
-            <p className="text-sm text-[var(--text-2)] mb-8">Access your cloud inventory.</p>
+            <h2 className="text-2xl font-bold text-[var(--text)] mb-1">{t('signInTitle')}</h2>
+            <p className="text-sm text-[var(--text-2)] mb-8">{t('accessInventory')}</p>
 
             <form onSubmit={handleAuth} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">Email</label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{t('emailLabel')}</label>
                 <input id="auth-email-input" type="email" required className="field w-full px-4 py-3 text-sm"
                   placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">Password</label>
+                <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{t('passwordLabel')}</label>
                 <input id="auth-password-input" type="password" required className="field w-full px-4 py-3 text-sm"
                   placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
               </div>
               <div className="flex items-center gap-2.5 pt-1">
                 <input type="checkbox" id="remember-me" className="w-4 h-4 rounded accent-[#14b8a6]" />
-                <label htmlFor="remember-me" className="text-sm text-[var(--text-2)] font-medium cursor-pointer select-none">Remember me</label>
+                <label htmlFor="remember-me" className="text-sm text-[var(--text-2)] font-medium cursor-pointer select-none">{t('rememberMe')}</label>
               </div>
 
               <AnimatePresence>
@@ -459,14 +523,14 @@ function AppInner() {
               <button id="auth-submit-btn" type="submit" disabled={authLoading}
                 className="btn-primary w-full py-3 text-sm mt-2 disabled:opacity-60 flex items-center justify-center gap-2">
                 {authLoading && <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
-                Sign In
+                {t('loginSubmit')}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <button onClick={() => { setIsSignUp(true); setAuthError(''); }}
                 className="text-sm text-[var(--text-2)] hover:text-[var(--primary)] transition-colors font-medium">
-                Don't have an account? <span className="font-bold">Register</span>
+                {t('switchSignup')}
               </button>
             </div>
           </motion.div>

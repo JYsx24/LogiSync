@@ -22,14 +22,14 @@ const LogoMark = ({ size = 28 }) => (
   </svg>
 );
 
-function ColorSwatch({ currentColor, position, onSelect }) {
+function ColorSwatch({ currentColor, position, onSelect, t }) {
   return (
     <div className="fixed z-[100] p-2.5 rounded-2xl shadow-2xl"
       style={{
         top: position.top, left: Math.min(position.left, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 172),
         background: 'var(--surface-overlay)', border: '1px solid var(--border-strong)', width: 164,
       }}>
-      <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">Folder Colour</p>
+      <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-2">{t('folderColour')}</p>
       <div className="grid grid-cols-4 gap-1.5">
         {FOLDER_COLORS.map(c => (
           <button key={c} onClick={() => onSelect(c)}
@@ -40,7 +40,7 @@ function ColorSwatch({ currentColor, position, onSelect }) {
       <button onClick={() => onSelect(null)}
         className="mt-2 w-full py-1.5 rounded-xl text-[10px] font-semibold transition-colors hover:text-[var(--text)]"
         style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-3)' }}>
-        No Colour
+        {t('noColour')}
       </button>
     </div>
   );
@@ -62,8 +62,8 @@ export default function Sidebar({
   const handleDeleteFolder = async (folder) => {
     const count = items.filter(i => i.folderId === folder.id).length;
     const msg = count > 0
-      ? `Delete "${folder.name}"? ${count} item(s) will become uncategorized.`
-      : `Delete folder "${folder.name}"?`;
+      ? t('folderDeleteConfirmItems').replace('{name}', folder.name).replace('{count}', count)
+      : t('folderDeleteConfirm').replace('{name}', folder.name);
     const ok = await confirm(msg);
     if (!ok) return;
     try {
@@ -74,9 +74,9 @@ export default function Sidebar({
       batch.delete(doc(db, 'folders', folder.id));
       await batch.commit();
       if (activeFolderId === folder.id) setActiveFolderId('all');
-      toast('Folder deleted');
+      toast(t('folderDeleted'));
     } catch (err) {
-      toast('Failed to delete folder', 'error');
+      toast(t('failedDeleteFolder'), 'error');
     }
   };
 
@@ -84,7 +84,7 @@ export default function Sidebar({
     try {
       await updateDoc(doc(db, 'folders', folderId), { color: color ?? null });
       setColorPickerFolderId(null);
-    } catch { toast('Failed to update colour', 'error'); }
+    } catch { toast(t('failedUpdateColour'), 'error'); }
   };
 
   const openColorPicker = (e, folderId) => {
@@ -113,7 +113,16 @@ export default function Sidebar({
   ];
 
   const sidebarContent = (
-    <aside className="flex flex-col h-full" style={{ background: 'var(--sidebar-bg)' }}>
+    <aside className="flex flex-col h-full" style={{
+      background: 'var(--sidebar-bg)',
+      // Force light text tokens so the dark sidebar stays readable in both light and dark mode
+      '--text': 'rgba(255, 255, 255, 0.92)',
+      '--text-2': 'rgba(255, 255, 255, 0.55)',
+      '--text-3': 'rgba(255, 255, 255, 0.30)',
+      '--border': 'rgba(255, 255, 255, 0.09)',
+      '--input-bg': 'rgba(255, 255, 255, 0.05)',
+      '--input-border': 'rgba(255, 255, 255, 0.09)',
+    }}>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-[var(--border)] shrink-0">
         <LogoMark size={28} />
@@ -153,7 +162,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ scrollbarWidth: 'none' }}>
         <button onClick={() => setFoldersExpanded(v => !v)}
           className="w-full flex items-center justify-between px-3 py-2 mb-1 text-left">
-          <span className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-widest">Folders</span>
+          <span className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-widest">{t('folders')}</span>
           <svg className={`w-3.5 h-3.5 text-[var(--text-3)] transition-transform ${foldersExpanded ? 'rotate-180' : ''}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
@@ -168,7 +177,7 @@ export default function Sidebar({
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
               </svg>
-              <span className="flex-1 truncate">All Stock</span>
+              <span className="flex-1 truncate">{t('allStock')}</span>
               <span className="text-[10px] opacity-60 font-medium">{items.length}</span>
             </button>
 
@@ -178,7 +187,7 @@ export default function Sidebar({
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span className="flex-1 truncate">Uncategorized</span>
+              <span className="flex-1 truncate">{t('uncategorized')}</span>
               <span className="text-[10px] opacity-60 font-medium">{items.filter(i => !i.folderId).length}</span>
             </button>
 
@@ -213,7 +222,7 @@ export default function Sidebar({
             {/* New folder input */}
             <form onSubmit={handleCreateFolder} className="flex gap-1.5 mt-2 px-1">
               <input id="new-folder-input" type="text"
-                placeholder="New folder…"
+                placeholder={t('folderPlaceholder')}
                 value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
                 className="field flex-1 px-3 py-1.5 text-xs rounded-xl"
                 style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)' }}
@@ -237,7 +246,7 @@ export default function Sidebar({
           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          Sign Out
+          {t('logout')}
         </button>
       </div>
     </aside>
@@ -271,6 +280,7 @@ export default function Sidebar({
             currentColor={folders.find(f => f.id === colorPickerFolderId)?.color || null}
             position={swatchPos}
             onSelect={c => handleColorChange(colorPickerFolderId, c)}
+            t={t}
           />
         </>
       )}

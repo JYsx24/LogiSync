@@ -5,7 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 
-function StockChart({ itemId }) {
+function StockChart({ itemId, t }) {
   const [logs, setLogs] = useState([]);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ function StockChart({ itemId }) {
   if (logs.length < 2) {
     return (
       <div className="h-40 flex items-center justify-center text-sm text-[var(--text-3)]">
-        Not enough history to chart yet.
+        {t('noHistoryYet')}
       </div>
     );
   }
@@ -42,13 +42,13 @@ function StockChart({ itemId }) {
             <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.02} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis dataKey="time" tick={{ fill: 'var(--text-3)', fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
         <YAxis tick={{ fill: 'var(--text-3)', fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
         <Tooltip
           contentStyle={{ background: 'var(--surface-overlay)', border: '1px solid var(--border-strong)', borderRadius: 10, fontSize: 11, color: 'var(--text)' }}
           cursor={{ stroke: 'var(--primary)', strokeWidth: 1, strokeDasharray: '3 3' }}
-          formatter={val => [`${val} units`, 'Stock']}
+          formatter={val => [`${val} ${t('units')}`, t('stockChartLabel')]}
         />
         <Area type="monotone" dataKey="quantity" stroke="#14b8a6" strokeWidth={2.5}
           fill="url(#stockGrad)" dot={false} activeDot={{ r: 4, fill: '#14b8a6' }} />
@@ -91,7 +91,7 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
         <button onClick={onBack} className="text-[var(--text-3)] hover:text-[var(--text)] transition-colors">
-          Inventory
+          {t('inventoryBreadcrumb')}
         </button>
         <svg className="w-3.5 h-3.5 text-[var(--text-3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
@@ -99,7 +99,7 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
         <span className="text-[var(--text)] font-medium">{item.name}</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-[var(--text)]">Item Details</h1>
+      <h1 className="text-2xl font-bold text-[var(--text)]">{t('itemDetails')}</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Photo */}
@@ -119,17 +119,17 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
           <div className="flex flex-wrap gap-3">
             {folderName && (
               <div className="glass rounded-xl px-4 py-2.5">
-                <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-0.5">Category</p>
+                <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-0.5">{t('category')}</p>
                 <p className="text-sm font-bold text-[var(--text)]">{folderName}</p>
               </div>
             )}
             <div className="glass rounded-xl px-4 py-2.5">
-              <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-0.5">Location</p>
+              <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-0.5">{t('storageLocation')}</p>
               <p className="text-sm font-bold text-[var(--text)]">{item.location || '—'}</p>
             </div>
             {item.price != null && item.price !== '' && (
               <div className="glass rounded-xl px-4 py-2.5">
-                <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-0.5">Price</p>
+                <p className="text-[9px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-0.5">{t('price')}</p>
                 <p className="text-sm font-bold text-[var(--primary)]">${Number(item.price).toFixed(2)}</p>
               </div>
             )}
@@ -138,7 +138,7 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
           {/* Current Stock */}
           <div className="glass rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-[var(--text-2)]">Current Stock</p>
+              <p className="text-sm font-semibold text-[var(--text-2)]">{t('currentStockLabel')}</p>
               <span className={`text-3xl font-black ${pendingDelta !== 0 ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
                 {pendingQty}
               </span>
@@ -159,7 +159,7 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
               <div className="flex-1 text-center">
                 {pendingDelta !== 0 && (
                   <span className={`text-xs font-semibold ${pendingDelta > 0 ? 'text-emerald-500' : 'text-[var(--danger)]'}`}>
-                    {pendingDelta > 0 ? `+${pendingDelta}` : `${pendingDelta}`} pending
+                    {pendingDelta > 0 ? `+${pendingDelta}` : `${pendingDelta}`} {t('pendingLabel')}
                   </span>
                 )}
               </div>
@@ -177,11 +177,11 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                   </svg>
-                  Confirm
+                  {t('confirm')}
                 </button>
                 <button onClick={() => setPendingDelta(0)}
                   className="px-4 py-2 rounded-xl text-sm font-semibold btn-ghost">
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             )}
@@ -189,8 +189,8 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
 
           {/* Stock History */}
           <div className="glass rounded-2xl p-5">
-            <p className="text-sm font-semibold text-[var(--text-2)] mb-4">Stock History</p>
-            <StockChart itemId={item.id} />
+            <p className="text-sm font-semibold text-[var(--text-2)] mb-4">{t('stockHistory')}</p>
+            <StockChart itemId={item.id} t={t} />
           </div>
 
           {/* Action buttons */}
@@ -200,7 +200,7 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit Item
+              {t('editItem')}
             </button>
             <button
               className="flex-1 py-3 text-sm font-bold rounded-xl border border-[var(--border-strong)] text-[var(--text-2)] hover:text-[var(--text)] hover:bg-[var(--surface-raised)] transition-colors flex items-center justify-center gap-2"
@@ -208,7 +208,7 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
-              Transfer Stock
+              {t('transferStock')}
             </button>
           </div>
         </div>
