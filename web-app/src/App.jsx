@@ -91,6 +91,12 @@ const translations = {
     loginTagline: 'Smart inventory,\nsimplified.',
     loginSubtext: 'Real-time cloud sync across all your devices.',
     registerSubtext: 'Start managing your inventory in minutes.',
+    // Password strength
+    pwRuleLength: 'At least 8 characters', pwRuleUppercase: 'Uppercase letter (A-Z)',
+    pwRuleLowercase: 'Lowercase letter (a-z)', pwRuleNumber: 'Number (0-9)',
+    pwRuleSpecial: 'Special character (!@#$...)',
+    pwStrengthWeak: 'Weak', pwStrengthFair: 'Fair', pwStrengthGood: 'Good', pwStrengthStrong: 'Strong',
+    pwMatch: 'Passwords match',
   },
   zh: {
     dashboard: '仪表板', profile: '个人资料', settings: '设置', logout: '退出',
@@ -161,6 +167,12 @@ const translations = {
     loginTagline: '智能库存，\n化繁为简。',
     loginSubtext: '跨设备实时云端同步。',
     registerSubtext: '几分钟内开始管理您的库存。',
+    // Password strength
+    pwRuleLength: '至少8个字符', pwRuleUppercase: '大写字母 (A-Z)',
+    pwRuleLowercase: '小写字母 (a-z)', pwRuleNumber: '数字 (0-9)',
+    pwRuleSpecial: '特殊字符 (!@#$...)',
+    pwStrengthWeak: '弱', pwStrengthFair: '一般', pwStrengthGood: '良好', pwStrengthStrong: '强',
+    pwMatch: '密码匹配',
   },
 };
 
@@ -212,6 +224,8 @@ function AppInner() {
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -226,6 +240,22 @@ function AppInner() {
   const [editingItem, setEditingItem] = useState(null);
 
   const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
+
+  const pwRules = [
+    { key: 'length',  met: password.length >= 8,          label: t('pwRuleLength') },
+    { key: 'upper',   met: /[A-Z]/.test(password),        label: t('pwRuleUppercase') },
+    { key: 'lower',   met: /[a-z]/.test(password),        label: t('pwRuleLowercase') },
+    { key: 'number',  met: /\d/.test(password),            label: t('pwRuleNumber') },
+    { key: 'special', met: /[^A-Za-z0-9]/.test(password), label: t('pwRuleSpecial') },
+  ];
+  const pwScore = pwRules.filter(r => r.met).length;
+  const pwStrength = pwScore <= 1
+    ? { label: t('pwStrengthWeak'),   color: 'var(--danger)' }
+    : pwScore <= 3
+    ? { label: t('pwStrengthFair'),   color: 'var(--warning)' }
+    : pwScore === 4
+    ? { label: t('pwStrengthGood'),   color: '#84cc16' }
+    : { label: t('pwStrengthStrong'), color: 'var(--success)' };
 
   useEffect(() => { localStorage.setItem('app_lang', language); }, [language]);
   useEffect(() => {
@@ -266,6 +296,7 @@ function AppInner() {
     e.preventDefault();
     setAuthError('');
     if (isSignUp && password !== confirmPassword) { setAuthError(t('passwordMismatch')); return; }
+    if (isSignUp && pwScore < 5) return;
     setAuthLoading(true);
     try {
       if (isSignUp) {
@@ -354,9 +385,32 @@ function AppInner() {
   if (!user) {
     /* Register */
     if (isSignUp) {
+      const EyeOn = () => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+        </svg>
+      );
+      const EyeOff = () => (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+        </svg>
+      );
+      const pwOk = pwScore === 5 && password === confirmPassword;
       return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
-          style={{ background: '#0a0f1a' }}>
+          style={{ background: 'var(--bg)' }}>
+
+          {/* Theme toggle */}
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
+            {theme === 'dark'
+              ? <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              : <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            }
+          </button>
+
           {/* Blob shapes */}
           <div className="absolute pointer-events-none" style={{ top: '-15%', left: '-12%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.35) 0%, rgba(13,148,136,0.1) 60%, transparent 80%)', filter: 'blur(80px)' }} />
           <div className="absolute pointer-events-none" style={{ bottom: '-20%', right: '-10%', width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, rgba(56,189,248,0.25) 0%, rgba(3,105,161,0.1) 60%, transparent 80%)', filter: 'blur(90px)' }} />
@@ -366,34 +420,101 @@ function AppInner() {
             {/* Left text */}
             <div className="hidden lg:flex flex-col gap-5">
               <LogoMark size={52} />
-              <h1 className="text-5xl font-black text-white leading-tight">Join<br/>LogiSync</h1>
-              <p className="text-base text-white/40 font-medium max-w-[220px]">{t('registerSubtext')}</p>
+              <h1 className="text-5xl font-black leading-tight" style={{ color: 'var(--text)' }}>Join<br/>LogiSync</h1>
+              <p className="text-base font-medium max-w-[220px]" style={{ color: 'var(--text-3)' }}>{t('registerSubtext')}</p>
             </div>
 
             {/* Form card */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
               className="w-full max-w-sm rounded-2xl p-8 flex flex-col gap-5"
-              style={{ background: 'rgba(20,26,42,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              style={{ background: 'var(--surface-overlay)', backdropFilter: 'blur(20px)', border: '1px solid var(--border-strong)' }}>
 
               {/* Mobile logo */}
               <div className="flex items-center gap-2.5 mb-1 lg:hidden">
                 <LogoMark size={24} />
-                <span className="text-white font-bold text-base">LogiSync</span>
+                <span className="font-bold text-base" style={{ color: 'var(--text)' }}>LogiSync</span>
               </div>
 
               <form onSubmit={handleAuth} className="flex flex-col gap-4">
-                {[
-                  { label: t('fullNameLabel'), value: fullName, setter: setFullName, type: 'text', ph: t('fullNameLabel'), id: 'reg-name' },
-                  { label: t('emailLabel'), value: email, setter: setEmail, type: 'email', ph: 'you@company.com', id: 'reg-email' },
-                  { label: t('passwordLabel'), value: password, setter: setPassword, type: 'password', ph: '••••••••', id: 'reg-pw', auto: 'new-password' },
-                  { label: t('confirmPasswordLabel'), value: confirmPassword, setter: setConfirmPassword, type: 'password', ph: '••••••••', id: 'reg-cpw', auto: 'new-password' },
-                ].map(({ label, value, setter, type, ph, id, auto }) => (
-                  <div key={id}>
-                    <label className="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5">{label}</label>
-                    <input id={id} type={type} required placeholder={ph} value={value} onChange={e => setter(e.target.value)}
-                      autoComplete={auto} className="field w-full px-4 py-3 text-sm" />
+                {/* Name */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-2)' }}>{t('fullNameLabel')}</label>
+                  <input id="reg-name" type="text" required placeholder={t('fullNameLabel')} value={fullName}
+                    onChange={e => setFullName(e.target.value)} className="field w-full px-4 py-3 text-sm" />
+                </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-2)' }}>{t('emailLabel')}</label>
+                  <input id="reg-email" type="email" required placeholder="you@company.com" value={email}
+                    onChange={e => setEmail(e.target.value)} className="field w-full px-4 py-3 text-sm" />
+                </div>
+                {/* Password */}
+                <div className="flex flex-col gap-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-2)' }}>{t('passwordLabel')}</label>
+                  <div className="relative">
+                    <input id="reg-pw" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={password}
+                      onChange={e => setPassword(e.target.value)} autoComplete="new-password"
+                      className="field w-full px-4 py-3 pr-11 text-sm" />
+                    <button type="button" onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: 'var(--text-3)' }}>
+                      {showPassword ? <EyeOff /> : <EyeOn />}
+                    </button>
                   </div>
-                ))}
+                  {/* Strength bar */}
+                  {password.length > 0 && (
+                    <>
+                      <div className="flex gap-1 mt-0.5">
+                        {[1,2,3,4,5].map(i => (
+                          <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300"
+                            style={{ background: i <= pwScore ? pwStrength.color : 'var(--border-strong)' }} />
+                        ))}
+                      </div>
+                      <p className="text-[10px] font-bold tracking-wide" style={{ color: pwStrength.color }}>
+                        {pwStrength.label}
+                      </p>
+                    </>
+                  )}
+                </div>
+                {/* Confirm password */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-2)' }}>{t('confirmPasswordLabel')}</label>
+                  <div className="relative">
+                    <input id="reg-cpw" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password"
+                      className="field w-full px-4 py-3 pr-11 text-sm" />
+                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: 'var(--text-3)' }}>
+                      {showConfirmPassword ? <EyeOff /> : <EyeOn />}
+                    </button>
+                  </div>
+                  {confirmPassword && (
+                    <p className="text-[10px] mt-1.5 font-medium"
+                      style={{ color: password === confirmPassword ? 'var(--success)' : 'var(--danger)' }}>
+                      {password === confirmPassword ? `✓ ${t('pwMatch')}` : `✕ ${t('passwordMismatch')}`}
+                    </p>
+                  )}
+                </div>
+
+                {/* Rules checklist */}
+                {password.length > 0 && (
+                  <div className="grid grid-cols-1 gap-1.5 p-3 rounded-xl"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                    {pwRules.map(({ key, met, label }) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 transition-all"
+                          style={{ background: met ? 'var(--success-bg)' : 'var(--border-strong)', color: met ? 'var(--success)' : 'transparent' }}>
+                          {met ? '✓' : ''}
+                        </span>
+                        <span className="text-[11px] font-medium transition-colors"
+                          style={{ color: met ? 'var(--text-2)' : 'var(--text-3)' }}>
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <AnimatePresence>
                   {authError && (
@@ -403,16 +524,18 @@ function AppInner() {
                   )}
                 </AnimatePresence>
 
-                <button id="auth-submit-btn" type="submit" disabled={authLoading}
-                  className="btn-primary w-full py-3 text-sm mt-1 disabled:opacity-60 flex items-center justify-center gap-2">
+                <button id="auth-submit-btn" type="submit"
+                  disabled={authLoading || !pwOk}
+                  className="btn-primary w-full py-3 text-sm mt-1 disabled:opacity-50 flex items-center justify-center gap-2">
                   {authLoading && <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
                   {t('signupSubmit')}
                 </button>
               </form>
 
               <div className="text-center">
-                <button onClick={() => { setIsSignUp(false); setAuthError(''); }}
-                  className="text-xs text-white/40 hover:text-[var(--primary)] transition-colors font-medium">
+                <button onClick={() => { setIsSignUp(false); setAuthError(''); setShowPassword(false); setShowConfirmPassword(false); }}
+                  className="text-xs font-medium transition-colors hover:text-[var(--primary)]"
+                  style={{ color: 'var(--text-3)' }}>
                   {t('backToLogin')}
                 </button>
               </div>
@@ -424,7 +547,7 @@ function AppInner() {
 
     /* Login */
     return (
-      <div className="min-h-screen flex">
+      <div className="min-h-screen flex relative">
         {/* Left panel */}
         <div className="hidden lg:flex w-[45%] relative flex-col p-12 overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #0d2218 0%, #0a1a2e 50%, #06101a 100%)' }}>
@@ -485,6 +608,16 @@ function AppInner() {
           </div>
         </div>
 
+        {/* Theme toggle */}
+        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
+          {theme === 'dark'
+            ? <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            : <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+          }
+        </button>
+
         {/* Right form panel */}
         <div className="flex-1 flex items-center justify-center p-8" style={{ background: 'var(--bg)' }}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
@@ -506,8 +639,18 @@ function AppInner() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{t('passwordLabel')}</label>
-                <input id="auth-password-input" type="password" required className="field w-full px-4 py-3 text-sm"
-                  placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                <div className="relative">
+                  <input id="auth-password-input" type={showPassword ? 'text' : 'password'} required className="field w-full px-4 py-3 pr-11 text-sm"
+                    placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                  <button type="button" onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: 'var(--text-3)' }}>
+                    {showPassword
+                      ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                      : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    }
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2.5 pt-1">
                 <input type="checkbox" id="remember-me" className="w-4 h-4 rounded accent-[#14b8a6]" />
