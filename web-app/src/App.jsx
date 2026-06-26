@@ -594,8 +594,8 @@ function AppInner() {
                   </div>
                 </div>
 
-                {/* Folder chip bar — list view only */}
-                {!isGridView && (
+                {/* Folder chip bar */}
+                {(
                   <div className="flex items-center gap-2 overflow-x-auto py-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {[
                       { id: 'all', label: t('allStock'), count: items.length, color: null },
