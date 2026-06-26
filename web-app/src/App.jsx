@@ -619,7 +619,10 @@ function AppInner() {
         </button>
 
         {/* Right form panel */}
-        <div className="flex-1 flex items-center justify-center p-8" style={{ background: 'var(--bg)' }}>
+        <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden" style={{ background: 'var(--bg)' }}>
+          <div className="absolute pointer-events-none" style={{ top: '-20%', right: '-15%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.28) 0%, rgba(13,148,136,0.08) 60%, transparent 80%)', filter: 'blur(70px)' }} />
+          <div className="absolute pointer-events-none" style={{ bottom: '-15%', left: '-10%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(56,189,248,0.18) 0%, rgba(3,105,161,0.07) 60%, transparent 80%)', filter: 'blur(80px)' }} />
+          <div className="absolute pointer-events-none" style={{ top: '55%', right: '30%', width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, transparent 70%)', filter: 'blur(55px)' }} />
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
             className="w-full max-w-sm">
             {/* Mobile logo */}
