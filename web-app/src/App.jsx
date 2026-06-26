@@ -276,6 +276,8 @@ function AppInner() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('logisync_tutorial_seen') !== 'true');
+  const [dashFolderName, setDashFolderName] = useState('');
+  const [dashFolderOpen, setDashFolderOpen] = useState(false);
 
   const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
 
@@ -366,6 +368,16 @@ function AppInner() {
     try {
       await addDoc(collection(db, 'folders'), { name: newFolderName.trim(), uid: user.uid, createdBy: user.uid, createdAt: serverTimestamp() });
       setNewFolderName('');
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDashCreateFolder = async (e) => {
+    e.preventDefault();
+    if (!dashFolderName.trim()) return;
+    try {
+      await addDoc(collection(db, 'folders'), { name: dashFolderName.trim(), uid: user.uid, createdBy: user.uid, createdAt: serverTimestamp() });
+      setDashFolderName('');
+      setDashFolderOpen(false);
     } catch (err) { console.error(err); }
   };
 
@@ -849,9 +861,14 @@ function AppInner() {
                   </div>
                 </div>
 
-                {/* Folder chip bar */}
-                {(
-                  <div className="flex items-center gap-2 overflow-x-auto py-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {/* Folders section */}
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-2)]">{t('folders')}</p>
+                    <span className="text-[10px] text-[var(--text-3)]">{folders.length} {t('customFolders').toLowerCase()}</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 items-center">
                     {[
                       { id: 'all', label: t('allStock'), count: items.length, color: null },
                       { id: 'uncategorized', label: t('uncategorized'), count: items.filter(i => !i.folderId).length, color: null },
@@ -859,29 +876,56 @@ function AppInner() {
                     ].map(({ id, label, count, color }) => {
                       const active = activeFolderId === id;
                       return (
-                        <button
-                          key={id}
-                          onClick={() => setActiveFolderId(id)}
-                          className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                        <button key={id} onClick={() => setActiveFolderId(id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
                           style={active ? {
-                            background: color ? `${color}20` : 'var(--primary-glow)',
+                            background: color ? `${color}18` : 'var(--primary-glow)',
                             color: color || 'var(--primary)',
-                            borderColor: color ? `${color}55` : 'var(--primary)',
-                            boxShadow: `0 0 10px ${color || 'var(--primary)'}30`,
+                            borderColor: color ? `${color}50` : 'var(--primary)',
+                            boxShadow: `0 0 8px ${color || 'var(--primary)'}25`,
                           } : {
                             background: 'var(--input-bg)',
                             color: 'var(--text-3)',
                             borderColor: 'var(--input-border)',
-                          }}
-                        >
-                          {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 4px ${color}` }} />}
-                          <span className="max-w-[100px] truncate">{label}</span>
-                          <span className="opacity-55 font-normal tabular-nums">{count}</span>
+                          }}>
+                          {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
+                          <span className="max-w-[120px] truncate">{label}</span>
+                          <span className="opacity-50 font-normal tabular-nums">{count}</span>
                         </button>
                       );
                     })}
+
+                    {/* New folder inline */}
+                    {dashFolderOpen ? (
+                      <form onSubmit={handleDashCreateFolder} className="flex items-center gap-1.5">
+                        <input autoFocus type="text" placeholder={t('folderPlaceholder')}
+                          value={dashFolderName} onChange={e => setDashFolderName(e.target.value)}
+                          className="field px-3 py-1.5 text-xs rounded-xl w-32" />
+                        <button type="submit"
+                          className="w-7 h-7 rounded-lg btn-primary flex items-center justify-center shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                          </svg>
+                        </button>
+                        <button type="button" onClick={() => { setDashFolderOpen(false); setDashFolderName(''); }}
+                          className="w-7 h-7 rounded-lg btn-ghost flex items-center justify-center shrink-0 text-[var(--text-3)]">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </form>
+                    ) : (
+                      <button onClick={() => setDashFolderOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border-dashed border"
+                        style={{ borderColor: 'var(--border-strong)', color: 'var(--text-3)' }}>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                        {t('createNewFolder')}
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Grid / empty state */}
                 {filteredItems.length === 0 ? (

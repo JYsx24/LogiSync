@@ -159,7 +159,7 @@ export default function Sidebar({
       </nav>
 
       {/* Folders section */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ scrollbarWidth: 'none', overflowX: 'visible' }}>
         <button onClick={() => setFoldersExpanded(v => !v)}
           className="w-full flex items-center justify-between px-3 py-2 mb-1 text-left">
           <span className="text-[10px] font-bold text-[var(--text-3)] uppercase tracking-widest">{t('folders')}</span>
@@ -220,11 +220,11 @@ export default function Sidebar({
             })}
 
             {/* New folder input */}
-            <form onSubmit={handleCreateFolder} className="flex gap-1.5 mt-2 px-1">
+            <form onSubmit={handleCreateFolder} className="flex gap-1.5 mt-2">
               <input id="new-folder-input" type="text"
                 placeholder={t('folderPlaceholder')}
                 value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
-                className="field flex-1 px-3 py-1.5 text-xs rounded-xl"
+                className="field flex-1 min-w-0 px-3 py-1.5 text-xs rounded-xl"
                 style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.08)' }}
               />
               <button id="create-folder-btn" type="submit"
