@@ -95,7 +95,7 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
   };
 
   const uploadImage = async (file) => {
-    const fileRef = ref(storage, `photos/${Date.now()}_${file.name}`);
+    const fileRef = ref(storage, `photos/${user.uid}/${Date.now()}_${file.name}`);
     await uploadBytes(fileRef, file);
     return getDownloadURL(fileRef);
   };
