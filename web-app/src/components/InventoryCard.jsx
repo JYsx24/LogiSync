@@ -36,7 +36,7 @@ function StockBar({ item }) {
   );
 }
 
-export default function InventoryCard({ item, folders, adjustQuantity, openEditModal, handleDeleteItem, isGridView, t }) {
+export default function InventoryCard({ item, folders, adjustQuantity, openEditModal, handleDeleteItem, onViewDetail, isGridView, t }) {
   const [isEditing, setIsEditing] = useState(false);
   const [pendingDelta, setPendingDelta] = useState(0);
   const folderName = folders.find(f => f.id === item.folderId)?.name;
@@ -183,8 +183,9 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
       className="glass rounded-2xl overflow-hidden flex flex-col transition-colors duration-300"
       style={{ borderColor: 'var(--border-strong)' }}
     >
-      {/* Photo */}
-      <div className="h-36 sm:h-44 relative overflow-hidden shrink-0" style={{ background: 'var(--surface-raised)' }}>
+      {/* Photo — click to view detail */}
+      <div className="h-36 sm:h-44 relative overflow-hidden shrink-0 cursor-pointer" style={{ background: 'var(--surface-raised)' }}
+        onClick={() => onViewDetail?.(item)}>
         <ItemPhoto src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
         <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/55 backdrop-blur-sm rounded-lg border border-white/10 text-[9px] font-bold tracking-wide text-white/85 max-w-[55%] truncate">
           {item.location}

@@ -45,6 +45,8 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
   const toast = useToast();
 
   const [itemName, setItemName] = useState('');
+  const [itemSku, setItemSku] = useState('');
+  const [itemPrice, setItemPrice] = useState('');
   const [itemLocation, setItemLocation] = useState('');
   const [itemQuantity, setItemQuantity] = useState('');
   const [itemPhotoFile, setItemPhotoFile] = useState(null);
@@ -58,6 +60,8 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
     if (!isOpen) return;
     if (editingItem) {
       setItemName(editingItem.name);
+      setItemSku(editingItem.sku || '');
+      setItemPrice(editingItem.price != null ? String(editingItem.price) : '');
       setItemLocation(editingItem.location);
       setItemQuantity('');
       setItemPhotoFile(null);
@@ -66,6 +70,8 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       setLowStockThreshold('');
     } else {
       setItemName('');
+      setItemSku('');
+      setItemPrice('');
       setItemLocation('');
       setItemQuantity('');
       setItemPhotoFile(null);
@@ -106,7 +112,8 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       const thresholdToSave = lowStockThreshold !== '' ? Number(lowStockThreshold) : (editingItem?.lowStockThreshold ?? 5);
 
       const data = {
-        name: itemName, location: itemLocation, quantity: qtyToSave,
+        name: itemName, sku: itemSku.trim() || '', price: itemPrice !== '' ? Number(itemPrice) : null,
+        location: itemLocation, quantity: qtyToSave,
         photoUrl: photoUrlToSave || '',
         folderId: itemFolderId, lowStockThreshold: thresholdToSave, uid: user.uid,
       };
@@ -172,6 +179,22 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
                   <input id="modal-name-input" type="text" required placeholder={t('itemName')}
                     value={itemName} onChange={e => setItemName(e.target.value)}
                     className="field w-full px-4 py-2.5 text-sm" />
+                </div>
+
+                {/* SKU + Price */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>SKU</FieldLabel>
+                    <input type="text" placeholder="e.g. ITEM-001"
+                      value={itemSku} onChange={e => setItemSku(e.target.value)}
+                      className="field w-full px-4 py-2.5 text-sm" />
+                  </div>
+                  <div>
+                    <FieldLabel>Price ($)</FieldLabel>
+                    <input type="number" min="0" step="0.01" placeholder="0.00"
+                      value={itemPrice} onChange={e => setItemPrice(e.target.value)}
+                      className="field w-full px-4 py-2.5 text-sm" />
+                  </div>
                 </div>
 
                 {/* Location */}

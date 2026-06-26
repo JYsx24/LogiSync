@@ -3,15 +3,16 @@
 
 /* ── Design tokens ─────────────────────────────────────────── */
 :root {
-  /* Layout — updated by scroll handler in App.jsx */
+  /* Layout */
   --header-h:        3.5rem;
 
-  /* Backgrounds — neutral zinc-black, not blue-tinted */
-  --bg:              #09090b;
-  --surface:         rgba(24, 24, 27, 0.95);
-  --surface-raised:  rgba(32, 32, 36, 0.97);
-  --surface-overlay: rgba(12, 12, 14, 0.99);
-  --header:          rgba(9, 9, 11, 0.88);
+  /* Backgrounds — dark navy */
+  --bg:              #0d1117;
+  --sidebar-bg:      #0f1623;
+  --surface:         rgba(22, 27, 42, 0.95);
+  --surface-raised:  rgba(28, 35, 52, 0.97);
+  --surface-overlay: rgba(13, 17, 28, 0.99);
+  --header:          rgba(13, 17, 23, 0.90);
 
   /* Borders */
   --border:          rgba(255, 255, 255, 0.09);
