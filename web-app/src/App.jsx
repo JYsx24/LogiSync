@@ -70,6 +70,7 @@ const translations = {
     passwordUpdated: 'Password updated', wrongPassword: 'Current password is incorrect',
     failedUpdatePassword: 'Failed to update password',
     // Item detail
+    stockStatus: 'Stock Status',
     noHistoryYet: 'Not enough history to chart yet.',
     inventoryBreadcrumb: 'Inventory', itemDetails: 'Item Details',
     category: 'Category', price: 'Price', currentStockLabel: 'Current Stock',
@@ -139,6 +140,7 @@ const translations = {
     passwordUpdated: '密码更新成功', wrongPassword: '当前密码不正确',
     failedUpdatePassword: '密码更新失败',
     // Item detail
+    stockStatus: '库存状态',
     noHistoryYet: '暂无足够历史记录以生成图表。',
     inventoryBreadcrumb: '库存列表', itemDetails: '商品详情',
     category: '分类', price: '价格', currentStockLabel: '当前库存',

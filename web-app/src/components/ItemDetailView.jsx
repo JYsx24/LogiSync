@@ -76,8 +76,13 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
   const folderName = folders.find(f => f.id === item.folderId)?.name;
   const pendingQty = item.quantity + pendingDelta;
   const threshold = item.lowStockThreshold ?? 5;
-  const max = Math.max(threshold * 4, item.quantity, 1);
-  const pct = Math.min(100, (pendingQty / max) * 100);
+
+  const isOut  = pendingQty === 0;
+  const isLow  = !isOut && pendingQty <= threshold;
+  const statusColor  = isOut ? 'var(--danger)'  : isLow ? 'var(--warning)'  : 'var(--success)';
+  const statusBg     = isOut ? 'var(--danger-bg)': isLow ? 'var(--warning-bg)': 'var(--success-bg)';
+  const statusBorder = isOut ? 'var(--danger-border)': isLow ? 'var(--warning-border)': 'var(--success-border)';
+  const statusText   = isOut ? t('statOutOfStock') : isLow ? t('statLowStock') : t('inStock');
 
   const handleConfirm = () => {
     if (pendingDelta !== 0) {
@@ -144,9 +149,37 @@ export default function ItemDetailView({ item, folders, adjustQuantity, openEdit
               </span>
             </div>
 
-            {/* Progress bar */}
-            <div className="w-full h-2 bg-[var(--border-strong)] rounded-full overflow-hidden mb-4">
-              <div className="h-full rounded-full transition-all duration-500 bg-[var(--primary)]" style={{ width: `${pct}%` }} />
+            {/* Threshold + status chips */}
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              {/* Alert threshold */}
+              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-border)' }}>
+                <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--warning)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wider truncate" style={{ color: 'var(--warning)' }}>
+                    {t('lowStockThreshold')}
+                  </p>
+                  <p className="text-base font-black tabular-nums leading-tight" style={{ color: 'var(--warning)' }}>
+                    {threshold} <span className="text-xs font-semibold">{t('units')}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Live status */}
+              <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                style={{ background: statusBg, border: `1px solid ${statusBorder}` }}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: statusColor }} />
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: statusColor }}>
+                    {t('stockStatus')}
+                  </p>
+                  <p className="text-base font-black leading-tight" style={{ color: statusColor }}>
+                    {statusText}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Stepper */}
