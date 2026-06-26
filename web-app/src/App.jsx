@@ -594,6 +594,40 @@ function AppInner() {
                   </div>
                 </div>
 
+                {/* Folder chip bar — list view only */}
+                {!isGridView && (
+                  <div className="flex items-center gap-2 overflow-x-auto py-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {[
+                      { id: 'all', label: t('allStock'), count: items.length, color: null },
+                      { id: 'uncategorized', label: t('uncategorized'), count: items.filter(i => !i.folderId).length, color: null },
+                      ...folders.map(f => ({ id: f.id, label: f.name, count: items.filter(i => i.folderId === f.id).length, color: f.color || null })),
+                    ].map(({ id, label, count, color }) => {
+                      const active = activeFolderId === id;
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setActiveFolderId(id)}
+                          className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                          style={active ? {
+                            background: color ? `${color}20` : 'var(--primary-glow)',
+                            color: color || 'var(--primary)',
+                            borderColor: color ? `${color}55` : 'var(--primary)',
+                            boxShadow: `0 0 10px ${color || 'var(--primary)'}30`,
+                          } : {
+                            background: 'var(--input-bg)',
+                            color: 'var(--text-3)',
+                            borderColor: 'var(--input-border)',
+                          }}
+                        >
+                          {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 4px ${color}` }} />}
+                          <span className="max-w-[100px] truncate">{label}</span>
+                          <span className="opacity-55 font-normal tabular-nums">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Grid / empty state */}
                 {filteredItems.length === 0 ? (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -654,23 +688,6 @@ function AppInner() {
               </motion.div>
             )}
 
-            {/* Settings redirects to profile */}
-            {!selectedItem && currentTab === 'settings' && (
-              <motion.div key="settings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}>
-                <ProfileSettings
-                  user={user}
-                  profileName={profileName}
-                  setProfileName={setProfileName}
-                  savingProfile={savingProfile}
-                  handleSaveProfile={handleSaveProfile}
-                  theme={theme}
-                  setTheme={setTheme}
-                  language={language}
-                  setLanguage={setLanguage}
-                  t={t}
-                />
-              </motion.div>
-            )}
           </AnimatePresence>
         </main>
       </div>
