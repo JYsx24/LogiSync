@@ -480,6 +480,34 @@ function AppInner() {
     );
   }
 
+  /* ── Auth top controls (lang + theme) ── */
+  const AuthTopControls = (
+    <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+      <div className="flex rounded-xl overflow-hidden"
+        style={{ border: '1px solid var(--border-strong)', background: 'var(--surface)' }}>
+        <button onClick={() => setLanguage('en')}
+          className="px-3 h-9 text-[11px] font-bold transition-colors"
+          style={{ background: language === 'en' ? 'var(--primary)' : 'transparent', color: language === 'en' ? '#09090b' : 'var(--text-3)' }}>
+          EN
+        </button>
+        <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border-strong)' }} />
+        <button onClick={() => setLanguage('zh')}
+          className="px-3 h-9 text-[11px] font-bold transition-colors"
+          style={{ background: language === 'zh' ? 'var(--primary)' : 'transparent', color: language === 'zh' ? '#09090b' : 'var(--text-3)' }}>
+          中文
+        </button>
+      </div>
+      <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        className="w-9 h-9 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
+        {theme === 'dark'
+          ? <svg className="w-[17px] h-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          : <svg className="w-[17px] h-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        }
+      </button>
+    </div>
+  );
+
   /* ── Auth ── */
   if (!user) {
     /* Register */
@@ -489,15 +517,7 @@ function AppInner() {
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
           style={{ background: 'var(--bg)' }}>
 
-          {/* Theme toggle */}
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
-            {theme === 'dark'
-              ? <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-              : <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-            }
-          </button>
+          {AuthTopControls}
 
           {/* Blob shapes */}
           <div className="absolute pointer-events-none" style={{ top: '-15%', left: '-12%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.35) 0%, rgba(13,148,136,0.1) 60%, transparent 80%)', filter: 'blur(80px)' }} />
@@ -696,15 +716,7 @@ function AppInner() {
           </div>
         </div>
 
-        {/* Theme toggle */}
-        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
-          {theme === 'dark'
-            ? <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-            : <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-          }
-        </button>
+        {AuthTopControls}
 
         {/* Right form panel */}
         <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden" style={{ background: 'var(--bg)' }}>
