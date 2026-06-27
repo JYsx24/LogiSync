@@ -1,10 +1,7 @@
-name: Build & Deploy (Dev)
+name: Deploy to Production
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -49,11 +46,10 @@ jobs:
           path: web-app/dist
           retention-days: 1
 
-  deploy-dev:
-    name: Deploy to Dev Channel
+  deploy-prod:
+    name: Deploy to Production (Live)
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
@@ -64,11 +60,20 @@ jobs:
           name: dist
           path: web-app/dist
 
-      - name: Deploy to Firebase Dev Channel
+      - name: Deploy to Firebase Live Channel
         env:
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOGISYNC_66BED }}
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools@latest hosting:channel:deploy dev --project logisync-66bed
+          OUTPUT=$(npx firebase-tools@latest deploy --only hosting --project logisync-66bed 2>&1) && CODE=0 || CODE=$?
           rm -f /tmp/firebase-sa.json
+          if [ $CODE -ne 0 ]; then
+            if echo "$OUTPUT" | grep -q "is the current active version"; then
+              echo "✓ Already up to date."
+              exit 0
+            fi
+            echo "$OUTPUT"
+            exit 1
+          fi
+          echo "$OUTPUT"
