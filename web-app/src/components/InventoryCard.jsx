@@ -180,7 +180,7 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
   /* ── Grid view ── */
   return (
     <motion.div layout transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      className="glass rounded-2xl overflow-hidden flex flex-col transition-colors duration-300"
+      className="glass rounded-2xl overflow-hidden flex flex-col h-full transition-colors duration-300"
       style={{ borderColor: 'var(--border-strong)' }}
     >
       {/* Photo — click to view detail */}
@@ -203,8 +203,8 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex flex-col p-3 gap-2">
-        <div className="min-w-0">
+      <div className="flex-1 flex flex-col justify-between p-3">
+        <div className="min-w-0 min-h-[44px]">
           <h3 className="text-sm font-bold text-[var(--text)] leading-snug line-clamp-1">{item.name}</h3>
           {folderName && (
             <span className="inline-block px-2 py-0.5 rounded-lg bg-[var(--primary-glow)] border border-[var(--primary)]/15 text-[10px] text-[var(--primary)] font-semibold mt-1">
@@ -214,7 +214,7 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
         </div>
 
         {/* Qty + actions */}
-        <div className="mt-auto pt-2.5 border-t border-[var(--border)] space-y-2">
+        <div className="pt-2.5 border-t border-[var(--border)] space-y-2">
           <div className="flex items-center justify-between gap-1">
 
             {/* Stepper with pending preview */}

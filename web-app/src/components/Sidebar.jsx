@@ -22,7 +22,7 @@ const LogoMark = ({ size = 28 }) => (
   </svg>
 );
 
-function ColorSwatch({ currentColor, position, onSelect, t }) {
+export function ColorSwatch({ currentColor, position, onSelect, t }) {
   return (
     <div className="fixed z-[100] p-2.5 rounded-2xl shadow-2xl"
       style={{

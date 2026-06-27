@@ -4,6 +4,7 @@ const STATS_CONFIG = [
   {
     key: 'skus',
     labelKey: 'statTotalSKUs',
+    shortLabelKey: 'statSKUsShort',
     color: 'text-[#14b8a6]',
     iconBg: 'bg-teal-500/12 border-teal-500/20',
     icon: (
@@ -15,6 +16,7 @@ const STATS_CONFIG = [
   {
     key: 'units',
     labelKey: 'statTotalUnits',
+    shortLabelKey: 'statUnitsShort',
     color: 'text-sky-400',
     iconBg: 'bg-sky-500/12 border-sky-500/20',
     icon: (
@@ -26,6 +28,7 @@ const STATS_CONFIG = [
   {
     key: 'low',
     labelKey: 'statLowStock',
+    shortLabelKey: 'statLowShort',
     color: 'text-amber-400',
     iconBg: 'bg-amber-500/12 border-amber-500/20',
     icon: (
@@ -37,6 +40,7 @@ const STATS_CONFIG = [
   {
     key: 'out',
     labelKey: 'statOutOfStock',
+    shortLabelKey: 'statOutShort',
     color: 'text-rose-400',
     iconBg: 'bg-rose-500/12 border-rose-500/20',
     icon: (
@@ -47,7 +51,7 @@ const STATS_CONFIG = [
   },
 ];
 
-export default function DashboardStats({ items, compact = false, t }) {
+export default function DashboardStats({ items, compact = false, stuck = false, t }) {
   const values = {
     skus: items.length,
     units: items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0),
@@ -57,16 +61,20 @@ export default function DashboardStats({ items, compact = false, t }) {
 
   if (compact) {
     return (
-      <div className="glass rounded-xl px-4 py-2.5 flex items-center gap-1">
+      <div className="flex items-stretch">
         {STATS_CONFIG.map((stat, i) => (
           <React.Fragment key={stat.key}>
-            {i > 0 && <div className="w-px h-5 bg-[var(--border-strong)] mx-3" />}
-            <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${stat.iconBg}`}>
-                {stat.icon}
+            {i > 0 && <div className="w-px self-stretch bg-[var(--border-strong)]" />}
+            <div className={`flex-1 flex flex-col items-center justify-center transition-all duration-200 ${stuck ? 'gap-0 py-1.5' : 'gap-1 py-2.5'}`}>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${stat.iconBg}`}>
+                  {stat.icon}
+                </div>
+                <span className={`text-sm font-black leading-none ${stat.color}`}>{values[stat.key]}</span>
               </div>
-              <span className={`text-sm font-black leading-none ${stat.color}`}>{values[stat.key]}</span>
-              <span className="text-[10px] text-[var(--text-3)] font-semibold uppercase tracking-wider hidden sm:block">{t(stat.labelKey)}</span>
+              <span className={`text-[8px] text-[var(--text-3)] font-semibold uppercase tracking-wider whitespace-nowrap leading-none transition-all duration-200 ${stuck ? 'max-h-0 opacity-0 overflow-hidden' : 'max-h-4 opacity-100'}`}>
+                {t(stat.shortLabelKey)}
+              </span>
             </div>
           </React.Fragment>
         ))}

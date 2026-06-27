@@ -53,6 +53,22 @@ export default function ProfileSettings({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
+  const pwRules = [
+    { key: 'length',  met: newPassword.length >= 8,          label: t('pwRuleLength') },
+    { key: 'upper',   met: /[A-Z]/.test(newPassword),        label: t('pwRuleUppercase') },
+    { key: 'lower',   met: /[a-z]/.test(newPassword),        label: t('pwRuleLowercase') },
+    { key: 'number',  met: /\d/.test(newPassword),            label: t('pwRuleNumber') },
+    { key: 'special', met: /[^A-Za-z0-9]/.test(newPassword), label: t('pwRuleSpecial') },
+  ];
+  const pwScore = pwRules.filter(r => r.met).length;
+  const pwStrength = pwScore <= 1
+    ? { label: t('pwStrengthWeak'),   color: 'var(--danger)' }
+    : pwScore <= 3
+    ? { label: t('pwStrengthFair'),   color: 'var(--warning)' }
+    : pwScore === 4
+    ? { label: t('pwStrengthGood'),   color: '#84cc16' }
+    : { label: t('pwStrengthStrong'), color: 'var(--success)' };
+
   const [emailValue] = useState(user.email);
 
   const handleChangePassword = async (e) => {
@@ -92,7 +108,6 @@ export default function ProfileSettings({
           <div className="flex flex-col gap-4">
             <EditableField label={t('nameLabel')} value={profileName} onChange={setProfileName} />
             <EditableField label={t('registeredEmail')} value={emailValue} onChange={() => {}} disabled={true} type="email" />
-            <EditableField label={t('role')} value={t('admin')} onChange={() => {}} disabled={true} />
           </div>
         </div>
 
@@ -149,11 +164,41 @@ export default function ProfileSettings({
                 value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
                 className="field w-full px-4 py-2.5 text-sm" autoComplete="current-password" />
             </div>
-            <div>
-              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">{t('newPassword')}</label>
+            <div className="flex flex-col gap-2">
+              <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider">{t('newPassword')}</label>
               <input type="password" placeholder="••••••••"
                 value={newPassword} onChange={e => setNewPassword(e.target.value)}
                 className="field w-full px-4 py-2.5 text-sm" autoComplete="new-password" />
+              {newPassword.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex gap-1 flex-1">
+                      {[1,2,3,4,5].map(i => (
+                        <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300"
+                          style={{ background: i <= pwScore ? pwStrength.color : 'var(--border-strong)' }} />
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-bold tracking-wide shrink-0" style={{ color: pwStrength.color }}>
+                      {pwStrength.label}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1 p-2.5 rounded-xl"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                    {pwRules.map(({ key, met, label }) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 transition-all"
+                          style={{ background: met ? 'var(--success-bg)' : 'var(--border-strong)' }}>
+                          {met && <svg className="w-2 h-2" viewBox="0 0 10 10" fill="none">
+                            <path d="M2 5l2.5 2.5L8 3" stroke="var(--success)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>}
+                        </span>
+                        <span className="text-[10px] font-medium transition-colors"
+                          style={{ color: met ? 'var(--text-2)' : 'var(--text-3)' }}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
             <div>
               <label className="block text-[10px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5">{t('confirmPasswordLabel')}</label>

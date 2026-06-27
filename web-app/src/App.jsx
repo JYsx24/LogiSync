@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signOut, onAuthStateChanged,
@@ -15,7 +15,7 @@ import { ToastProvider, useToast } from './components/Toast';
 import { ConfirmProvider, useConfirm } from './components/ConfirmDialog';
 import DashboardStats from './components/DashboardStats';
 import SortBar, { applySort } from './components/SortBar';
-import Sidebar from './components/Sidebar';
+import Sidebar, { ColorSwatch } from './components/Sidebar';
 import InventoryCard from './components/InventoryCard';
 import AddEditModal from './components/AddEditModal';
 import ItemDetailView from './components/ItemDetailView';
@@ -59,6 +59,7 @@ const translations = {
     exportCSV: 'Export CSV',
     statTotalSKUs: 'Total SKUs', statTotalUnits: 'Total Units',
     statLowStock: 'Low Stock', statOutOfStock: 'Out of Stock',
+    statSKUsShort: 'SKUs', statUnitsShort: 'Units', statLowShort: 'Low Stock', statOutShort: 'Out of Stock',
     // Profile & Settings
     profileAndSettings: 'Profile & Settings', userProfile: 'User Profile',
     nameLabel: 'Name', role: 'Role', admin: 'Admin',
@@ -153,6 +154,7 @@ const translations = {
     exportCSV: '导出CSV',
     statTotalSKUs: '商品总数', statTotalUnits: '总库存量',
     statLowStock: '低库存', statOutOfStock: '缺货',
+    statSKUsShort: '商品数', statUnitsShort: '库存量', statLowShort: '低库存', statOutShort: '缺货',
     // Profile & Settings
     profileAndSettings: '个人资料与设置', userProfile: '用户资料',
     nameLabel: '姓名', role: '角色', admin: '管理员',
@@ -278,6 +280,10 @@ function AppInner() {
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('logisync_tutorial_seen') !== 'true');
   const [dashFolderName, setDashFolderName] = useState('');
   const [dashFolderOpen, setDashFolderOpen] = useState(false);
+  const [dashColorFolderId, setDashColorFolderId] = useState(null);
+  const [dashSwatchPos, setDashSwatchPos] = useState({ top: 0, left: 0 });
+  const [statsStuck, setStatsStuck] = useState(false);
+  const mainRef = useRef(null);
 
   const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
 
@@ -304,6 +310,20 @@ function AppInner() {
   }, [theme]);
   useEffect(() => { localStorage.setItem('app_layout_grid', isGridView); }, [isGridView]);
   useEffect(() => onAuthStateChanged(auth, u => { setUser(u); setLoading(false); }), []);
+
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root) return;
+    const handleScroll = () => {
+      const sentinel = root.querySelector('[data-folders-end]');
+      if (!sentinel) { setStatsStuck(false); return; }
+      const rootRect = root.getBoundingClientRect();
+      setStatsStuck(sentinel.getBoundingClientRect().bottom < rootRect.top);
+    };
+    root.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => root.removeEventListener('scroll', handleScroll);
+  }, [user, currentTab, selectedItem]);
 
   useEffect(() => {
     if (!user) { setProfileName(''); return; }
@@ -369,6 +389,21 @@ function AppInner() {
       await addDoc(collection(db, 'folders'), { name: newFolderName.trim(), uid: user.uid, createdBy: user.uid, createdAt: serverTimestamp() });
       setNewFolderName('');
     } catch (err) { console.error(err); }
+  };
+
+  const openDashColorPicker = (e, folderId) => {
+    e.stopPropagation();
+    if (dashColorFolderId === folderId) { setDashColorFolderId(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDashSwatchPos({ top: rect.bottom + 6, left: rect.left - 8 });
+    setDashColorFolderId(folderId);
+  };
+
+  const handleDashColorChange = async (folderId, color) => {
+    try {
+      await updateDoc(doc(db, 'folders', folderId), { color: color ?? null });
+    } catch (err) { console.error(err); }
+    setDashColorFolderId(null);
   };
 
   const handleDashCreateFolder = async (e) => {
@@ -741,7 +776,7 @@ function AppInner() {
   const displayName = profileName || user.email.split('@')[0];
 
   return (
-    <div className="min-h-screen flex text-[var(--text)]" style={{ background: 'var(--bg)' }}>
+    <div className="h-screen flex text-[var(--text)] overflow-hidden" style={{ background: 'var(--bg)' }}>
       <AnimatePresence>
         {showTutorial && (
           <TutorialModal onClose={() => setShowTutorial(false)} t={t} />
@@ -769,31 +804,32 @@ function AppInner() {
       {/* Content area */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Top stats bar */}
-        <div className="sticky top-0 z-30 border-b border-[var(--border)]"
+        {/* Mobile nav bar — hidden on desktop (sidebar handles nav there) */}
+        <div className="lg:hidden sticky top-0 z-30 border-b border-[var(--border)]"
           style={{ background: 'var(--header)', backdropFilter: 'blur(20px) saturate(160%)', WebkitBackdropFilter: 'blur(20px) saturate(160%)' }}>
           <div className="flex items-center gap-3 px-4 sm:px-6 h-14">
-            {/* Mobile hamburger */}
             <button onClick={() => setMobileMenuOpen(v => !v)}
-              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] shrink-0">
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            {/* Mobile logo */}
-            <div className="flex items-center gap-2 lg:hidden mr-2">
+            <div className="flex items-center gap-2">
               <LogoMark size={22} />
               <span className="font-bold text-sm text-[var(--text)]">LogiSync</span>
-            </div>
-            {/* Stats */}
-            <div className="flex-1">
-              <DashboardStats items={items} compact={true} t={t} />
             </div>
           </div>
         </div>
 
+        {/* Stats bar — lives outside main so it sticks flush below the nav bar with no padding gap */}
+        {currentTab === 'dashboard' && !selectedItem && (
+          <div className="border-b border-[var(--border)] z-20 shrink-0" style={{ background: 'var(--bg)' }}>
+            <DashboardStats items={items} compact={true} stuck={statsStuck} t={t} />
+          </div>
+        )}
+
         {/* Page */}
-        <main className="flex-1 px-4 sm:px-6 py-6 pb-12 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 px-4 sm:px-6 py-6 pb-12 overflow-y-auto">
           <AnimatePresence mode="wait">
             {/* Item detail view */}
             {selectedItem && (
@@ -869,29 +905,54 @@ function AppInner() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 items-center">
+                    {/* System chips: All Stock + Uncategorized */}
                     {[
-                      { id: 'all', label: t('allStock'), count: items.length, color: null },
-                      { id: 'uncategorized', label: t('uncategorized'), count: items.filter(i => !i.folderId).length, color: null },
-                      ...folders.map(f => ({ id: f.id, label: f.name, count: items.filter(i => i.folderId === f.id).length, color: f.color || null })),
-                    ].map(({ id, label, count, color }) => {
+                      { id: 'all', label: t('allStock'), count: items.length },
+                      { id: 'uncategorized', label: t('uncategorized'), count: items.filter(i => !i.folderId).length },
+                    ].map(({ id, label, count }) => {
                       const active = activeFolderId === id;
                       return (
                         <button key={id} onClick={() => setActiveFolderId(id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
                           style={active ? {
-                            background: color ? `${color}18` : 'var(--primary-glow)',
-                            color: color || 'var(--primary)',
-                            borderColor: color ? `${color}50` : 'var(--primary)',
-                            boxShadow: `0 0 8px ${color || 'var(--primary)'}25`,
-                          } : {
-                            background: 'var(--input-bg)',
-                            color: 'var(--text-3)',
-                            borderColor: 'var(--input-border)',
-                          }}>
-                          {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
+                            background: 'var(--primary-glow)', color: 'var(--primary)',
+                            borderColor: 'var(--primary)', boxShadow: '0 0 8px var(--primary)25',
+                          } : { background: 'var(--input-bg)', color: 'var(--text-3)', borderColor: 'var(--input-border)' }}>
                           <span className="max-w-[120px] truncate">{label}</span>
                           <span className="opacity-50 font-normal tabular-nums">{count}</span>
                         </button>
+                      );
+                    })}
+
+                    {/* Custom folder chips: color dot (opens picker) + label (filters) */}
+                    {folders.map(folder => {
+                      const count = items.filter(i => i.folderId === folder.id).length;
+                      const active = activeFolderId === folder.id;
+                      const color = folder.color || null;
+                      const chipStyle = active ? {
+                        color: color || 'var(--primary)',
+                        borderColor: color ? `${color}50` : 'var(--primary)',
+                        background: color ? `${color}18` : 'var(--primary-glow)',
+                        boxShadow: `0 0 8px ${color || 'var(--primary)'}25`,
+                      } : { background: 'var(--input-bg)', color: 'var(--text-3)', borderColor: 'var(--input-border)' };
+                      return (
+                        <div key={folder.id} className="flex items-center rounded-xl border text-xs font-semibold overflow-hidden transition-all"
+                          style={chipStyle}>
+                          {/* Color dot → opens picker */}
+                          <button type="button"
+                            onClick={e => openDashColorPicker(e, folder.id)}
+                            title={t('folderColour')}
+                            className="pl-2.5 pr-1 py-1.5 flex items-center hover:opacity-70 transition-opacity">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform hover:scale-125"
+                              style={{ background: color || 'var(--border-strong)', boxShadow: color ? `0 0 4px ${color}` : 'none' }} />
+                          </button>
+                          {/* Label → filters inventory */}
+                          <button type="button" onClick={() => setActiveFolderId(folder.id)}
+                            className="flex items-center gap-1 pr-2.5 py-1.5">
+                            <span className="max-w-[100px] truncate">{folder.name}</span>
+                            <span className="opacity-50 font-normal tabular-nums">{count}</span>
+                          </button>
+                        </div>
                       );
                     })}
 
@@ -925,6 +986,21 @@ function AppInner() {
                       </button>
                     )}
                   </div>
+
+                  {/* Dashboard color picker */}
+                  {dashColorFolderId && (
+                    <>
+                      <div className="fixed inset-0 z-[90]" onClick={() => setDashColorFolderId(null)} />
+                      <ColorSwatch
+                        currentColor={folders.find(f => f.id === dashColorFolderId)?.color || null}
+                        position={dashSwatchPos}
+                        onSelect={c => handleDashColorChange(dashColorFolderId, c)}
+                        t={t}
+                      />
+                    </>
+                  )}
+                  {/* Sentinel: when this scrolls above main's top, stats bar collapses to slim */}
+                  <div data-folders-end />
                 </div>
 
                 {/* Grid / empty state */}
