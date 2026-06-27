@@ -1,1350 +1,1093 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged 
+import { useState, useEffect, useRef } from 'react';
+import {
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut, onAuthStateChanged,
 } from 'firebase/auth';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  setDoc,
-  doc, 
-  onSnapshot,
-  increment,
-  serverTimestamp,
-  query,
-  where,
-  orderBy,
-  limit
+import {
+  collection, addDoc, updateDoc, deleteDoc,
+  setDoc, doc, onSnapshot, increment,
+  serverTimestamp, query, where,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { motion, AnimatePresence } from 'framer-motion';
-import { auth, db, storage } from './firebase';
+import { auth, db } from './firebase';
+
+import { ToastProvider, useToast } from './components/Toast';
+import { ConfirmProvider, useConfirm } from './components/ConfirmDialog';
+import DashboardStats from './components/DashboardStats';
+import SortBar, { applySort } from './components/SortBar';
+import Sidebar, { ColorSwatch } from './components/Sidebar';
+import InventoryCard from './components/InventoryCard';
+import AddEditModal from './components/AddEditModal';
+import ItemDetailView from './components/ItemDetailView';
+import ProfileSettings from './components/ProfileSettings';
+import TutorialModal from './components/TutorialModal';
 
 const translations = {
   en: {
-    dashboard: "Dashboard",
-    profile: "Profile",
-    settings: "Settings",
-    logout: "Logout",
-    searchPlaceholder: "Search stock SKU or location...",
-    registerSKU: "Register New Stock",
-    noInventory: "No Inventory Found",
-    emptyFolder: "Empty folder or no SKUs match query search.",
-    operator: "Operator",
-    folders: "Inventory Folders",
-    allStock: "All Stock",
-    uncategorized: "Uncategorized",
-    customFolders: "Custom Folders",
-    createNewFolder: "Create New Folder",
-    folderPlaceholder: "Folder name...",
-    profileHeader: "Operator Profile",
-    registeredEmail: "Registered Email",
-    displayName: "Operator Display Name",
-    displayNamePlaceholder: "Enter display name...",
-    saveProfile: "Save Profile Changes",
-    savingProfile: "Saving Changes...",
-    profileUpdatedSuccess: "Profile updated successfully!",
-    profileUpdatedError: "Error saving profile.",
-    themeLabel: "Theme Settings",
-    langLabel: "Language Settings",
-    lightMode: "Light Mode",
-    darkMode: "Dark Mode",
-    english: "English",
-    chinese: "Chinese (中文)",
-    cancel: "Cancel",
-    commitStock: "Commit Stock",
-    editingStock: "Edit Registered Stock",
-    detailsModified: "Details Modified",
-    skuRegistered: "SKU Registered",
-    changeLogHistory: "Change Log History",
-    createSKUToLog: "Create new stock item to begin logging history events.",
-    noChangesLogged: "No changes logged for this item yet.",
-    itemName: "Item Name",
-    storageLocation: "Storage Location",
-    quantity: "Quantity",
-    associateFolder: "Associate with Folder",
-    stockPhoto: "Stock Photo",
-    choosePhoto: "Choose Stock Photo",
-    photoSelected: "Photo Selected ✓",
-    photoUrlActive: "Photo URL active on cloud",
-    confirmDelete: "Remove this item from the cloud inventory?",
-    deleteStock: "Remove Stock",
-    adjust: "Adjust",
-    inStock: "In Stock",
-    units: "units",
-    editState: "Edit State",
-    closeEdit: "Close Edit",
-    details: "Details",
-    delete: "Delete",
-    loadingSession: "Resolving Cloud PERSISTENCE session...",
-    appName: "LogiSync Cloud",
-    opsCenter: "Production Operations Center",
-    loginSubmit: "Authenticate Operator",
-    signupSubmit: "Establish Operator Account",
-    switchSignup: "New operator? Request Cloud Credentials",
-    switchLogin: "Already registered? Login here"
+    dashboard: 'Dashboard', profile: 'Profile', settings: 'Settings', logout: 'Sign Out',
+    searchPlaceholder: 'Search by name or location…',
+    registerSKU: 'Add Stock', noInventory: 'No Items Found',
+    emptyFolder: 'This folder is empty or no items match your search.',
+    emptyInventory: 'Your inventory is empty',
+    emptyInventoryHint: 'Start by registering your first stock item.',
+    operator: 'Operator', folders: 'Folders', allStock: 'All Stock',
+    uncategorized: 'Uncategorized', customFolders: 'Custom Folders',
+    createNewFolder: 'New Folder', folderPlaceholder: 'Folder name…',
+    profileHeader: 'Operator Profile', registeredEmail: 'Email Address',
+    displayName: 'Display Name', displayNamePlaceholder: 'Your name…',
+    saveProfile: 'Save Changes', savingProfile: 'Saving…',
+    profileUpdatedSuccess: 'Profile saved!', profileUpdatedError: 'Failed to save profile.',
+    themeLabel: 'Appearance', langLabel: 'Language',
+    lightMode: 'Light', darkMode: 'Dark',
+    english: 'English', chinese: '中文',
+    cancel: 'Cancel', commitStock: 'Save',
+    editingStock: 'Edit Item',
+    changeLogHistory: 'Change History',
+    createSKUToLog: 'History will appear here after saving.',
+    noChangesLogged: 'No changes recorded yet.',
+    itemName: 'Item Name', storageLocation: 'Location', quantity: 'Quantity',
+    associateFolder: 'Folder', stockPhoto: 'Photo',
+    photoUrlActive: 'Current photo saved',
+    deleteStock: 'Delete', adjust: 'Adjust',
+    inStock: 'In Stock', units: 'units', editState: 'Edit', closeEdit: 'Done',
+    loadingSession: 'Loading…',
+    appName: 'LogiSync', opsCenter: 'Cloud Inventory',
+    loginSubmit: 'Sign In', signupSubmit: 'Create Account',
+    switchSignup: "Don't have an account? Sign up",
+    switchLogin: 'Already have an account? Sign in',
+    lowStockThreshold: 'Low Stock Alert',
+    exportCSV: 'Export CSV',
+    statTotalSKUs: 'Total SKUs', statTotalUnits: 'Total Units',
+    statLowStock: 'Low Stock', statOutOfStock: 'Out of Stock',
+    statSKUsShort: 'SKUs', statUnitsShort: 'Units', statLowShort: 'Low Stock', statOutShort: 'Out of Stock',
+    // Profile & Settings
+    profileAndSettings: 'Profile & Settings', userProfile: 'User Profile',
+    nameLabel: 'Name', role: 'Role', admin: 'Admin',
+    notificationPrefs: 'Notification Preferences',
+    stockAlerts: 'Stock Alerts', lowStockWarnings: 'Low Stock Warnings', systemUpdates: 'System Updates',
+    security: 'Security', currentPassword: 'Current Password',
+    newPassword: 'New Password', confirmPasswordLabel: 'Confirm Password',
+    updatePassword: 'Update Password', passwordMismatch: 'Passwords do not match',
+    passwordTooShort: 'Password must be at least 6 characters',
+    passwordUpdated: 'Password updated', wrongPassword: 'Current password is incorrect',
+    failedUpdatePassword: 'Failed to update password',
+    // Item detail
+    stockStatus: 'Stock Status',
+    noHistoryYet: 'Not enough history to chart yet.',
+    inventoryBreadcrumb: 'Inventory', itemDetails: 'Item Details',
+    category: 'Category', price: 'Price', currentStockLabel: 'Current Stock',
+    pendingLabel: 'pending', confirm: 'Confirm',
+    stockHistory: 'Stock History', editItem: 'Edit Item', transferStock: 'Transfer Stock',
+    stockChartLabel: 'Stock',
+    // Sidebar folders
+    folderColour: 'Folder Colour', noColour: 'No Colour',
+    folderDeleteConfirm: 'Delete folder "{name}"?',
+    folderDeleteConfirmItems: 'Delete "{name}"? {count} item(s) will become uncategorized.',
+    folderDeleted: 'Folder deleted', failedDeleteFolder: 'Failed to delete folder',
+    failedUpdateColour: 'Failed to update colour',
+    // Auth page strings
+    signInTitle: 'Sign In', accessInventory: 'Access your cloud inventory.',
+    rememberMe: 'Remember me', emailLabel: 'Email', passwordLabel: 'Password',
+    fullNameLabel: 'Full Name', confirmPasswordLabel2: 'Confirm Password',
+    backToLogin: 'Back to Login',
+    loginTagline: 'Smart inventory,\nsimplified.',
+    loginSubtext: 'Real-time cloud sync across all your devices.',
+    registerSubtext: 'Start managing your inventory in minutes.',
+    // Password strength
+    pwRuleLength: 'At least 8 characters', pwRuleUppercase: 'Uppercase letter (A-Z)',
+    pwRuleLowercase: 'Lowercase letter (a-z)', pwRuleNumber: 'Number (0-9)',
+    pwRuleSpecial: 'Special character (!@#$...)',
+    pwStrengthWeak: 'Weak', pwStrengthFair: 'Fair', pwStrengthGood: 'Good', pwStrengthStrong: 'Strong',
+    pwMatch: 'Passwords match',
+    // Tutorial
+    tutorialStep1Title: 'Welcome to LogiSync!',
+    tutorialStep1Desc: 'Your cloud-based inventory system is ready. Here\'s a quick tour of the core workflow to get you up and running.',
+    tutorialStep2Title: 'Add Your Items',
+    tutorialStep2Desc: 'Register inventory items with a name, location, quantity, price, SKU, and optional photo. All data syncs to the cloud instantly.',
+    tutorialStep2Hint: 'Tap "Add Stock" in the top bar to create your first item.',
+    tutorialStep3Title: 'Organize with Folders',
+    tutorialStep3Desc: 'Create custom folders to group items by category, product line, or warehouse section. Drag-filter using the sidebar.',
+    tutorialStep3Hint: 'Use the sidebar on the left to create and switch folders.',
+    tutorialStep4Title: 'Adjust Stock Levels',
+    tutorialStep4Desc: 'Click any item card to open its detail view. Use the +/− stepper to stage a quantity change, then confirm to write it — every change is logged with a timestamp.',
+    tutorialStep4Hint: 'Click any item card to open its detail view.',
+    tutorialStep5Title: 'Monitor Your Dashboard',
+    tutorialStep5Desc: 'The Dashboard gives you a real-time overview: total SKUs, units in stock, low-stock alerts, and out-of-stock counts — all updated live.',
+    tutorialStep5Hint: 'Switch to Dashboard in the navigation to see live stats.',
+    tutorialStepOf: 'Step {n} of {total}',
+    tutorialDontShow: "Don't show this again",
+    tutorialNext: 'Next', tutorialPrev: 'Back', tutorialFinish: 'Get Started',
   },
   zh: {
-    dashboard: "仪表板",
-    profile: "个人资料",
-    settings: "设置",
-    logout: "注销登出",
-    searchPlaceholder: "搜索库存商品或存放位置...",
-    registerSKU: "登记新库存",
-    noInventory: "未找到库存项",
-    emptyFolder: "文件夹为空或没有匹配的商品。",
-    operator: "操作员",
-    folders: "库存文件夹",
-    allStock: "所有库存",
-    uncategorized: "未分类",
-    customFolders: "自定义文件夹",
-    createNewFolder: "创建新文件夹",
-    folderPlaceholder: "文件夹名称...",
-    profileHeader: "操作员个人资料",
-    registeredEmail: "注册电子邮箱",
-    displayName: "操作员显示名称",
-    displayNamePlaceholder: "请输入显示名称...",
-    saveProfile: "保存个人资料修改",
-    savingProfile: "正在保存...",
-    profileUpdatedSuccess: "个人资料更新成功！",
-    profileUpdatedError: "保存个人资料时出错。",
-    themeLabel: "主题设置",
-    langLabel: "语言设置",
-    lightMode: "浅色模式",
-    darkMode: "深色模式",
-    english: "英文 (English)",
-    chinese: "中文",
-    cancel: "取消",
-    commitStock: "提交入库",
-    editingStock: "编辑已登记库存",
-    detailsModified: "详情已修改",
-    skuRegistered: "商品已登记",
-    changeLogHistory: "变更日志历史",
-    createSKUToLog: "创建新库存项以开始记录变更日志。",
-    noChangesLogged: "此项暂无变更记录。",
-    itemName: "商品名称",
-    storageLocation: "存放位置",
-    quantity: "数量",
-    associateFolder: "关联文件夹",
-    stockPhoto: "商品图片",
-    choosePhoto: "选择商品图片",
-    photoSelected: "图片已选择 ✓",
-    photoUrlActive: "云端图片链接有效",
-    confirmDelete: "确定从云端库存中移除此项吗？",
-    deleteStock: "移除库存",
-    adjust: "调整",
-    inStock: "当前库存",
-    units: "件",
-    editState: "编辑状态",
-    closeEdit: "关闭编辑",
-    details: "详情",
-    delete: "删除",
-    loadingSession: "正在解析云端持久化会话...",
-    appName: "LogiSync 云端仓储",
-    opsCenter: "云端生产操作中心",
-    loginSubmit: "操作员登录验证",
-    signupSubmit: "注册操作员账户",
-    switchSignup: "新操作员？申请云端访问权限",
-    switchLogin: "已有账户？在此登录"
-  }
+    dashboard: '仪表板', profile: '个人资料', settings: '设置', logout: '退出',
+    searchPlaceholder: '搜索名称或位置…',
+    registerSKU: '添加库存', noInventory: '未找到商品',
+    emptyFolder: '此文件夹为空或无匹配商品。',
+    emptyInventory: '库存为空',
+    emptyInventoryHint: '从添加第一件库存商品开始。',
+    operator: '操作员', folders: '文件夹', allStock: '全部库存',
+    uncategorized: '未分类', customFolders: '自定义文件夹',
+    createNewFolder: '新建文件夹', folderPlaceholder: '文件夹名称…',
+    profileHeader: '操作员资料', registeredEmail: '电子邮箱',
+    displayName: '显示名称', displayNamePlaceholder: '您的名称…',
+    saveProfile: '保存修改', savingProfile: '保存中…',
+    profileUpdatedSuccess: '资料已保存！', profileUpdatedError: '保存失败。',
+    themeLabel: '外观', langLabel: '语言',
+    lightMode: '浅色', darkMode: '深色',
+    english: 'English', chinese: '中文',
+    cancel: '取消', commitStock: '保存',
+    editingStock: '编辑商品',
+    changeLogHistory: '变更历史',
+    createSKUToLog: '保存后此处将显示历史记录。',
+    noChangesLogged: '暂无变更记录。',
+    itemName: '商品名称', storageLocation: '存放位置', quantity: '数量',
+    associateFolder: '文件夹', stockPhoto: '商品图片',
+    photoUrlActive: '当前图片已保存',
+    deleteStock: '删除', adjust: '调整',
+    inStock: '当前库存', units: '件', editState: '编辑', closeEdit: '完成',
+    loadingSession: '加载中…',
+    appName: 'LogiSync', opsCenter: '云端库存',
+    loginSubmit: '登录', signupSubmit: '注册账户',
+    switchSignup: '没有账户？立即注册',
+    switchLogin: '已有账户？立即登录',
+    lowStockThreshold: '低库存预警',
+    exportCSV: '导出CSV',
+    statTotalSKUs: '商品总数', statTotalUnits: '总库存量',
+    statLowStock: '低库存', statOutOfStock: '缺货',
+    statSKUsShort: '商品数', statUnitsShort: '库存量', statLowShort: '低库存', statOutShort: '缺货',
+    // Profile & Settings
+    profileAndSettings: '个人资料与设置', userProfile: '用户资料',
+    nameLabel: '姓名', role: '角色', admin: '管理员',
+    notificationPrefs: '通知偏好',
+    stockAlerts: '库存提醒', lowStockWarnings: '低库存预警', systemUpdates: '系统更新',
+    security: '安全设置', currentPassword: '当前密码',
+    newPassword: '新密码', confirmPasswordLabel: '确认密码',
+    updatePassword: '更新密码', passwordMismatch: '两次输入的密码不一致',
+    passwordTooShort: '密码至少需要6个字符',
+    passwordUpdated: '密码更新成功', wrongPassword: '当前密码不正确',
+    failedUpdatePassword: '密码更新失败',
+    // Item detail
+    stockStatus: '库存状态',
+    noHistoryYet: '暂无足够历史记录以生成图表。',
+    inventoryBreadcrumb: '库存列表', itemDetails: '商品详情',
+    category: '分类', price: '价格', currentStockLabel: '当前库存',
+    pendingLabel: '待确认', confirm: '确认',
+    stockHistory: '库存历史', editItem: '编辑商品', transferStock: '转移库存',
+    stockChartLabel: '库存',
+    // Sidebar folders
+    folderColour: '文件夹颜色', noColour: '无颜色',
+    folderDeleteConfirm: '确认删除文件夹"{name}"？',
+    folderDeleteConfirmItems: '删除"{name}"？{count}个商品将变为未分类。',
+    folderDeleted: '文件夹已删除', failedDeleteFolder: '文件夹删除失败',
+    failedUpdateColour: '颜色更新失败',
+    // Auth page strings
+    signInTitle: '登录', accessInventory: '访问您的云端库存。',
+    rememberMe: '记住我', emailLabel: '电子邮箱', passwordLabel: '密码',
+    fullNameLabel: '全名', confirmPasswordLabel2: '确认密码',
+    backToLogin: '返回登录',
+    loginTagline: '智能库存，\n化繁为简。',
+    loginSubtext: '跨设备实时云端同步。',
+    registerSubtext: '几分钟内开始管理您的库存。',
+    // Password strength
+    pwRuleLength: '至少8个字符', pwRuleUppercase: '大写字母 (A-Z)',
+    pwRuleLowercase: '小写字母 (a-z)', pwRuleNumber: '数字 (0-9)',
+    pwRuleSpecial: '特殊字符 (!@#$...)',
+    pwStrengthWeak: '弱', pwStrengthFair: '一般', pwStrengthGood: '良好', pwStrengthStrong: '强',
+    pwMatch: '密码匹配',
+    // Tutorial
+    tutorialStep1Title: '欢迎使用 LogiSync！',
+    tutorialStep1Desc: '您的云端库存系统已就绪。以下是核心工作流程的快速导览，帮助您快速上手。',
+    tutorialStep2Title: '添加商品',
+    tutorialStep2Desc: '注册库存商品，填写名称、位置、数量、价格、SKU，并可上传图片。所有数据即时同步至云端。',
+    tutorialStep2Hint: '点击顶部栏的"添加库存"创建第一件商品。',
+    tutorialStep3Title: '文件夹分类管理',
+    tutorialStep3Desc: '创建自定义文件夹，按类别、产品线或仓库区域对商品分组，通过侧边栏快速筛选。',
+    tutorialStep3Hint: '使用左侧边栏创建和切换文件夹。',
+    tutorialStep4Title: '调整库存数量',
+    tutorialStep4Desc: '点击任意商品卡片打开详情视图。使用 +/− 步进器暂存数量变更，确认后写入——每次变更均会记录时间戳。',
+    tutorialStep4Hint: '点击任意商品卡片打开详情视图。',
+    tutorialStep5Title: '监控仪表板',
+    tutorialStep5Desc: '仪表板提供实时概览：总SKU数、库存量、低库存预警和缺货商品数量——所有数据实时更新。',
+    tutorialStep5Hint: '点击导航栏中的"仪表板"查看实时统计。',
+    tutorialStepOf: '第 {n} 步，共 {total} 步',
+    tutorialDontShow: '不再显示',
+    tutorialNext: '下一步', tutorialPrev: '返回', tutorialFinish: '开始使用',
+  },
 };
 
-// Sub-component for individual item card to manage independent gated edit states
-function InventoryCard({ item, folders, adjustQuantity, openEditModal, handleDeleteItem, isGridView, t }) {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const folderName = folders.find(f => f.id === item.folderId)?.name || t('uncategorized');
-  const fallbackImg = 'https://images.unsplash.com/photo-1553413719-8758712747d5?auto=format&fit=crop&w=300&q=80';
-
-  // -- COMPACT LIST ROW ------------------------------------------------------
-  if (!isGridView) {
-    return (
-      React.createElement(motion.div, {
-        layout: true,
-        transition: { type: "spring", stiffness: 300, damping: 25 },
-        className: "glass-panel rounded-xl overflow-hidden shadow-sm relative"
-      },
-        // Main row
-        React.createElement('div', { className: "flex items-center gap-3 p-2.5 pr-12" },
-          // Thumbnail
-          React.createElement('div', { className: "w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-[var(--input-bg)]" },
-            React.createElement('img', {
-              src: item.photoUrl,
-              alt: item.name,
-              className: "w-full h-full object-cover",
-              onError: (e) => { e.target.onerror = null; e.target.src = fallbackImg; }
-            })
-          ),
-          // Info
-          React.createElement('div', { className: "flex-1 min-w-0" },
-            React.createElement('h3', { className: "text-sm font-bold text-[var(--text-color)] truncate leading-tight" }, item.name),
-            React.createElement('div', { className: "flex items-center gap-2 mt-0.5 flex-wrap" },
-              React.createElement('span', { className: "text-[11px] text-[var(--text-muted)] truncate flex items-center gap-0.5" },
-                React.createElement('svg', { className: "w-3 h-3 shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
-                  React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" }),
-                  React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 11a3 3 0 11-6 0 3 3 0 016 0z" })
-                ),
-                item.location
-              ),
-              React.createElement('span', { className: "text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 font-semibold uppercase tracking-wide shrink-0" }, folderName)
-            ),
-            React.createElement('div', { className: "flex items-center gap-1 mt-1" },
-              React.createElement('span', { className: "text-[10px] text-[var(--text-muted-dark)] uppercase tracking-wide font-semibold" }, t('inStock') + ':'),
-              React.createElement('span', { className: "text-sm font-black text-[var(--text-color)]" }, item.quantity),
-              React.createElement('span', { className: "text-[10px] text-[var(--text-muted)]" }, t('units'))
-            )
-          )
-        ),
-        // Edit toggle pinned top-right
-        React.createElement('button', {
-          onClick: () => setIsEditing(!isEditing),
-          className: `absolute top-2 right-2 w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${isEditing ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text-muted)] hover:text-[var(--text-color)]'}`,
-          title: isEditing ? t('closeEdit') : t('editState')
-        },
-          isEditing
-            ? React.createElement('svg', { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
-                React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2.5", d: "M6 18L18 6M6 6l12 12" })
-              )
-            : React.createElement('svg', { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
-                React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" })
-              )
-        ),
-        // Expandable controls
-        React.createElement(AnimatePresence, { initial: false },
-          isEditing && React.createElement(motion.div, {
-            key: "list-controls",
-            initial: { height: 0, opacity: 0 },
-            animate: { height: "auto", opacity: 1 },
-            exit: { height: 0, opacity: 0 },
-            transition: { duration: 0.18, ease: "easeInOut" },
-            className: "overflow-hidden"
-          },
-            React.createElement('div', { className: "mx-2.5 mb-2.5 bg-[var(--input-bg)] rounded-xl p-2.5 border border-[var(--input-border)] flex items-center justify-between" },
-              React.createElement('div', { className: "flex items-center space-x-2" },
-                React.createElement('button', { onClick: () => adjustQuantity(item.id, -1), className: "w-8 h-8 bg-[var(--panel-bg)] hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)] rounded-lg flex items-center justify-center font-bold text-base transition-colors border border-[var(--input-border)]" }, '-'),
-                React.createElement('span', { className: "text-xs font-semibold text-[var(--text-muted)]" }, t('adjust')),
-                React.createElement('button', { onClick: () => adjustQuantity(item.id, 1), className: "w-8 h-8 bg-[var(--panel-bg)] hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)] rounded-lg flex items-center justify-center font-bold text-base transition-colors border border-[var(--input-border)]" }, '+')
-              ),
-              React.createElement('div', { className: "flex items-center space-x-1" },
-                React.createElement('button', { onClick: () => openEditModal(item), className: "p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg transition-colors border border-indigo-500/10", title: "Edit details" },
-                  React.createElement('svg', { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
-                    React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" })
-                  )
-                ),
-                React.createElement('button', { onClick: () => handleDeleteItem(item.id), className: "p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors border border-red-500/10", title: "Remove Stock" },
-                  React.createElement('svg', { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
-                    React.createElement('path', { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" })
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    );
-  }
-
-  // -- GRID CARD -------------------------------------------------------------
-  return (
-    <motion.div 
-      layout
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="glass-panel rounded-2xl overflow-hidden shadow-lg hover:shadow-indigo-500/5 duration-300 flex flex-col relative"
-    >
-      {/* Photo Header */}
-      <div className="h-44 bg-[var(--input-bg)] relative flex items-center justify-center overflow-hidden shrink-0">
-        <img 
-          src={item.photoUrl} 
-          alt={item.name} 
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = 'https://images.unsplash.com/photo-1553413719-8758712747d5?auto=format&fit=crop&w=300&q=80';
-          }}
-        />
-        <div className="absolute top-3 right-3 px-2.5 py-1 bg-black/60 backdrop-blur-sm rounded-lg border border-white/10 text-[10px] uppercase font-bold tracking-wider text-indigo-300">
-          {item.location}
-        </div>
-      </div>
-
-      {/* Details Area */}
-      <div className="flex-1 flex flex-col justify-between p-2">
-        <div className="mb-2">
-          <h3 className="text-base font-bold text-[var(--text-color)] mb-1 line-clamp-1">{item.name}</h3>
-          <p className="text-xs text-[var(--text-muted)] flex items-center mb-1">
-            <svg className="w-3.5 h-3.5 mr-1 text-[var(--text-muted-dark)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {item.location}
-          </p>
-          <span className="inline-block px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-500 font-semibold uppercase tracking-wider">
-            {t('folders')}: {folderName}
-          </span>
-        </div>
-
-        <div className="flex flex-col border-t border-[var(--panel-border)] pt-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted-dark)] font-semibold block">{t('inStock')}</span>
-              <span className="text-xl font-black text-[var(--text-color)]">{item.quantity} <span className="text-xs font-normal text-[var(--text-muted)]">{t('units')}</span></span>
-            </div>
-
-            <button 
-              onClick={() => setIsEditing(!isEditing)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                isEditing 
-                ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/10' 
-                : 'bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] border-[var(--input-border)] text-[var(--text-muted)]'
-              }`}
-            >
-              {isEditing ? t('closeEdit') : t('editState')}
-            </button>
-          </div>
-
-          {/* Gated Controls Panel */}
-          <AnimatePresence initial={false}>
-            {isEditing && (
-              <motion.div
-                initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                animate={{ height: "auto", opacity: 1, marginTop: 12 }}
-                exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="bg-[var(--input-bg)] rounded-xl p-3 border border-[var(--input-border)] flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={() => adjustQuantity(item.id, -1)}
-                      className="w-8 h-8 bg-[var(--panel-bg)] hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)] rounded-lg flex items-center justify-center font-bold text-base transition-colors border border-[var(--input-border)]"
-                    >
-                      -
-                    </button>
-                    <span className="text-sm font-semibold text-[var(--text-muted)] px-1">{t('adjust')}</span>
-                    <button 
-                      onClick={() => adjustQuantity(item.id, 1)}
-                      className="w-8 h-8 bg-[var(--panel-bg)] hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)] rounded-lg flex items-center justify-center font-bold text-base transition-colors border border-[var(--input-border)]"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="flex items-center space-x-1">
-                    <button 
-                      onClick={() => openEditModal(item)}
-                      className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg transition-colors border border-indigo-500/10"
-                      title="Edit details & history"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors border border-red-500/10"
-                      title="Remove Stock"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </motion.div>
-  );
+function exportToCSV(items, folders) {
+  const header = ['Name', 'SKU', 'Location', 'Quantity', 'Price', 'Folder', 'Low Stock Alert'];
+  const rows = items.map(item => {
+    const folder = folders.find(f => f.id === item.folderId)?.name || 'Uncategorized';
+    return [`"${item.name}"`, `"${item.sku || ''}"`, `"${item.location}"`, item.quantity, item.price || '', `"${folder}"`, item.lowStockThreshold ?? 5].join(',');
+  });
+  const csv = [header.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `logisync-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-export default function App() {
+const EyeOn = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+  </svg>
+);
+
+const EyeOff = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+  </svg>
+);
+
+const LogoMark = ({ size = 30 }) => (
+  <svg width={size} height={Math.round(size * 0.88)} viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="50,8 82,26 50,44 18,26" fill="#2dd4bf"/>
+    <polygon points="18,26 50,44 50,80 18,62" fill="#0d9488"/>
+    <polygon points="50,44 82,26 82,62 50,80" fill="#0369a1"/>
+    <line x1="50" y1="8" x2="82" y2="26" stroke="rgba(255,255,255,.22)" strokeWidth="1"/>
+    <line x1="50" y1="8" x2="18" y2="26" stroke="rgba(255,255,255,.11)" strokeWidth="1"/>
+  </svg>
+);
+
+/* ── Main App ── */
+function AppInner() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Navigation: "dashboard", "profile", or "settings"
   const [currentTab, setCurrentTab] = useState('dashboard');
+  const [selectedItem, setSelectedItem] = useState(null);
   const [profileName, setProfileName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [language, setLanguage] = useState(() => localStorage.getItem('app_lang') || 'en');
   const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'dark');
   const [isGridView, setIsGridView] = useState(() => localStorage.getItem('app_layout_grid') !== 'false');
+  const [sortKey, setSortKey] = useState('name-asc');
 
-  useEffect(() => {
-    localStorage.setItem('app_lang', language);
-  }, [language]);
-
-  useEffect(() => {
-    localStorage.setItem('app_theme', theme);
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem('app_layout_grid', isGridView);
-  }, [isGridView]);
-
-  const t = (key) => translations[language]?.[key] || translations['en']?.[key] || key;
-
-  // Auth states
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
-  // Folder states
   const [folders, setFolders] = useState([]);
   const [activeFolderId, setActiveFolderId] = useState('all');
   const [newFolderName, setNewFolderName] = useState('');
-
-  // Inventory states
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Modal states
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [itemName, setItemName] = useState('');
-  const [itemLocation, setItemLocation] = useState('');
-  const [itemQuantity, setItemQuantity] = useState(0);
-  const [itemPhotoFile, setItemPhotoFile] = useState(null);
-  const [itemPhotoUrl, setItemPhotoUrl] = useState('');
-  const [itemFolderId, setItemFolderId] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [historyLogs, setHistoryLogs] = useState([]);
+  const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('logisync_tutorial_seen') !== 'true');
+  const [dashFolderName, setDashFolderName] = useState('');
+  const [dashFolderOpen, setDashFolderOpen] = useState(false);
+  const [dashColorFolderId, setDashColorFolderId] = useState(null);
+  const [dashSwatchPos, setDashSwatchPos] = useState({ top: 0, left: 0 });
+  const [statsStuck, setStatsStuck] = useState(false);
+  const mainRef = useRef(null);
 
-  // Persistence/session check on load
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+  const t = key => translations[language]?.[key] ?? translations.en[key] ?? key;
 
-  // Fetch operator's profile name in real-time
+  const pwRules = [
+    { key: 'length',  met: password.length >= 8,          label: t('pwRuleLength') },
+    { key: 'upper',   met: /[A-Z]/.test(password),        label: t('pwRuleUppercase') },
+    { key: 'lower',   met: /[a-z]/.test(password),        label: t('pwRuleLowercase') },
+    { key: 'number',  met: /\d/.test(password),            label: t('pwRuleNumber') },
+    { key: 'special', met: /[^A-Za-z0-9]/.test(password), label: t('pwRuleSpecial') },
+  ];
+  const pwScore = pwRules.filter(r => r.met).length;
+  const pwStrength = pwScore <= 1
+    ? { label: t('pwStrengthWeak'),   color: 'var(--danger)' }
+    : pwScore <= 3
+    ? { label: t('pwStrengthFair'),   color: 'var(--warning)' }
+    : pwScore === 4
+    ? { label: t('pwStrengthGood'),   color: '#84cc16' }
+    : { label: t('pwStrengthStrong'), color: 'var(--success)' };
+
+  useEffect(() => { localStorage.setItem('app_lang', language); }, [language]);
   useEffect(() => {
-    if (!user) {
-      setProfileName('');
-      return;
-    }
-    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-      if (docSnap.exists()) {
-        setProfileName(docSnap.data().name || '');
-      }
-    }, (err) => {
-      console.error("Profile sync failed:", err);
+    localStorage.setItem('app_theme', theme);
+    document.documentElement.classList.toggle('light', theme === 'light');
+  }, [theme]);
+  useEffect(() => { localStorage.setItem('app_layout_grid', isGridView); }, [isGridView]);
+  useEffect(() => onAuthStateChanged(auth, u => { setUser(u); setLoading(false); }), []);
+
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root) return;
+    const handleScroll = () => {
+      const sentinel = root.querySelector('[data-folders-end]');
+      if (!sentinel) { setStatsStuck(false); return; }
+      const rootRect = root.getBoundingClientRect();
+      setStatsStuck(sentinel.getBoundingClientRect().bottom < rootRect.top);
+    };
+    root.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => root.removeEventListener('scroll', handleScroll);
+  }, [user, currentTab, selectedItem]);
+
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, 'users', user.uid), snap => {
+      if (snap.exists()) setProfileName(snap.data().name || '');
     });
-    return unsubscribe;
   }, [user]);
 
-  // Sync folders list in real-time (current user only)
   useEffect(() => {
-    if (!user) {
-      setFolders([]);
-      return;
-    }
-    const q = query(
-      collection(db, 'folders'),
-      where('uid', '==', user.uid)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const folderList = [];
-      snapshot.forEach((doc) => {
-        folderList.push({ id: doc.id, ...doc.data() });
-      });
-      setFolders(folderList);
-    }, (err) => {
-      console.error("Folders sync error:", err);
-    });
-    return unsubscribe;
+    if (!user) return;
+    return onSnapshot(query(collection(db, 'folders'), where('uid', '==', user.uid)), snap =>
+      setFolders(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  // Sync inventory (current user only)
   useEffect(() => {
-    if (!user) {
-      setItems([]);
-      return;
-    }
-
-    const q = query(
-      collection(db, 'inventory'),
-      where('uid', '==', user.uid)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const inventoryList = [];
-      snapshot.forEach((doc) => {
-        inventoryList.push({ id: doc.id, ...doc.data() });
-      });
-      setItems(inventoryList);
-    }, (error) => {
-      console.error("Firestore sync failed:", error);
-    });
-
-    return unsubscribe;
+    if (!user) return;
+    return onSnapshot(query(collection(db, 'inventory'), where('uid', '==', user.uid)), snap =>
+      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  // Fetch log history for selected edit item
+  // Sync selectedItem when items update
   useEffect(() => {
-    if (!editingItem) {
-      setHistoryLogs([]);
-      return;
+    if (selectedItem) {
+      const fresh = items.find(i => i.id === selectedItem.id);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (fresh) setSelectedItem(fresh);
     }
-    const historyRef = collection(db, 'inventory', editingItem.id, 'history');
-    const q = query(historyRef, orderBy('timestamp', 'desc'), limit(5));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logs = [];
-      snapshot.forEach((doc) => {
-        logs.push({ id: doc.id, ...doc.data() });
-      });
-      setHistoryLogs(logs);
-    }, (err) => {
-      console.error("History sync error:", err);
-    });
-    return unsubscribe;
-  }, [editingItem]);
+  }, [items, selectedItem]);
 
-  // Auth Operations
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError('');
+    if (isSignUp && password !== confirmPassword) { setAuthError(t('passwordMismatch')); return; }
+    if (isSignUp && pwScore < 5) return;
+    setAuthLoading(true);
     try {
       if (isSignUp) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const registeredUser = userCredential.user;
-        await setDoc(doc(db, 'users', registeredUser.uid), {
-          email: registeredUser.email,
-          createdAt: serverTimestamp(),
-          role: "operator",
-          name: ""
-        });
+        const { user: u } = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', u.uid), { email: u.email, createdAt: serverTimestamp(), role: 'operator', name: fullName.trim() });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setAuthError(err.message.replace('Firebase: ', ''));
-    }
+      setAuthError(err.message.replace('Firebase: ', '').replace(/\s*\(.*\)\.?\s*$/, ''));
+    } finally { setAuthLoading(false); }
   };
 
-  const handleLogout = () => {
-    signOut(auth);
-    setCurrentTab('dashboard');
-  };
+  const handleLogout = () => { signOut(auth); setCurrentTab('dashboard'); setSelectedItem(null); };
 
-  // Profile Save
   const handleSaveProfile = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setSavingProfile(true);
     try {
-      await setDoc(doc(db, 'users', user.uid), {
-        name: profileName.trim(),
-        email: user.email,
-        role: "operator"
-      }, { merge: true });
-      alert(t("profileUpdatedSuccess"));
-    } catch (err) {
-      console.error("Failed to save profile:", err);
-      alert(t("profileUpdatedError"));
-    } finally {
-      setSavingProfile(false);
-    }
+      await setDoc(doc(db, 'users', user.uid), { name: profileName.trim(), email: user.email, role: 'operator' }, { merge: true });
+      toast(t('profileUpdatedSuccess'));
+    } catch { toast(t('profileUpdatedError'), 'error'); }
+    finally { setSavingProfile(false); }
   };
 
-  // Folders Operations
   const handleCreateFolder = async (e) => {
     e.preventDefault();
     if (!newFolderName.trim()) return;
     try {
-      await addDoc(collection(db, 'folders'), {
-        name: newFolderName.trim(),
-        uid: user.uid,
-        createdBy: user.uid,
-        createdAt: serverTimestamp()
-      });
+      await addDoc(collection(db, 'folders'), { name: newFolderName.trim(), uid: user.uid, createdBy: user.uid, createdAt: serverTimestamp() });
       setNewFolderName('');
-    } catch (err) {
-      console.error("Failed to create folder:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  // Helper log history compiler
-  const logInventoryChange = async (itemId, quantity, action) => {
+  const openDashColorPicker = (e, folderId) => {
+    e.stopPropagation();
+    if (dashColorFolderId === folderId) { setDashColorFolderId(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDashSwatchPos({ top: rect.bottom + 6, left: rect.left - 8 });
+    setDashColorFolderId(folderId);
+  };
+
+  const handleDashColorChange = async (folderId, color) => {
     try {
-      await addDoc(collection(db, 'inventory', itemId, 'history'), {
-        quantity: Number(quantity),
-        timestamp: serverTimestamp(),
-        operator: user.email,
-        action: action
-      });
-    } catch (err) {
-      console.error("Failed to write history log:", err);
-    }
+      await updateDoc(doc(db, 'folders', folderId), { color: color ?? null });
+    } catch (err) { console.error(err); }
+    setDashColorFolderId(null);
   };
 
-  const adjustQuantity = async (itemId, amount) => {
-    try {
-      const itemRef = doc(db, 'inventory', itemId);
-      const currentItem = items.find(i => i.id === itemId);
-      if (currentItem && currentItem.quantity + amount < 0) {
-        return;
-      }
-      
-      const newQty = currentItem.quantity + amount;
-      await updateDoc(itemRef, {
-        quantity: increment(amount)
-      });
-      
-      await logInventoryChange(itemId, newQty, amount > 0 ? "+1 Increment" : "-1 Decrement");
-    } catch (err) {
-      console.error("Failed to adjust quantity:", err);
-    }
-  };
-
-  const uploadImage = async (file) => {
-    if (!file) return '';
-    const fileRef = ref(storage, `photos/${Date.now()}_${file.name}`);
-    await uploadBytes(fileRef, file);
-    return await getDownloadURL(fileRef);
-  };
-
-  const handleSaveItem = async (e) => {
+  const handleDashCreateFolder = async (e) => {
     e.preventDefault();
-    if (!itemName || !itemLocation) return;
-    setSaving(true);
-
+    if (!dashFolderName.trim()) return;
     try {
-      let photoUrlToSave = itemPhotoUrl;
-
-      if (itemPhotoFile) {
-        photoUrlToSave = await uploadImage(itemPhotoFile);
-      }
-
-      const itemData = {
-        name: itemName,
-        location: itemLocation,
-        quantity: Number(itemQuantity),
-        photoUrl: photoUrlToSave || 'https://images.unsplash.com/photo-1553413719-8758712747d5?auto=format&fit=crop&w=300&q=80',
-        folderId: itemFolderId,
-        uid: user.uid
-      };
-
-      if (editingItem) {
-        const itemRef = doc(db, 'inventory', editingItem.id);
-        await updateDoc(itemRef, itemData);
-        await logInventoryChange(editingItem.id, itemQuantity, "Details Modified");
-      } else {
-        const itemRef = await addDoc(collection(db, 'inventory'), itemData);
-        await logInventoryChange(itemRef.id, itemQuantity, "SKU Registered");
-      }
-      closeModal();
-    } catch (err) {
-      console.error("Failed to save stock details:", err);
-      alert("Error saving stock data to Firestore Cloud.");
-    } finally {
-      setSaving(false);
-    }
+      await addDoc(collection(db, 'folders'), { name: dashFolderName.trim(), uid: user.uid, createdBy: user.uid, createdAt: serverTimestamp() });
+      setDashFolderName('');
+      setDashFolderOpen(false);
+    } catch (err) { console.error(err); }
   };
 
-  const handleDeleteItem = async (itemId) => {
-    if (!confirm("Remove this item from the cloud inventory?")) return;
+  const adjustQuantity = async (itemId, amount, targetQty) => {
+    const current = items.find(i => i.id === itemId);
+    if (!current) return;
+    const newQty = targetQty !== undefined ? targetQty : current.quantity + amount;
+    if (newQty < 0) return;
+    const delta = newQty - current.quantity;
+    if (delta === 0) return;
+    try {
+      await updateDoc(doc(db, 'inventory', itemId), { quantity: increment(delta) });
+      await addDoc(collection(db, 'inventory', itemId, 'history'), {
+        quantity: newQty, timestamp: serverTimestamp(), operator: user.email,
+        action: delta > 0 ? `+${delta}` : `${delta}`,
+      });
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteItem = async (itemId, itemName) => {
+    const ok = await confirm(`Remove "${itemName}" from inventory?`);
+    if (!ok) return;
     try {
       await deleteDoc(doc(db, 'inventory', itemId));
-    } catch (err) {
-      console.error("Failed to delete cloud stock:", err);
-    }
+      toast('Item removed');
+      if (selectedItem?.id === itemId) setSelectedItem(null);
+    } catch { toast('Failed to remove item', 'error'); }
   };
 
-  const openAddModal = () => {
-    setEditingItem(null);
-    setItemName('');
-    setItemLocation('');
-    setItemQuantity(0);
-    setItemPhotoFile(null);
-    setItemPhotoUrl('');
-    setItemFolderId(activeFolderId !== 'all' && activeFolderId !== 'uncategorized' ? activeFolderId : '');
-    setIsModalOpen(true);
-  };
+  const filteredItems = applySort(
+    items.filter(item => {
+      const q = searchQuery.toLowerCase();
+      const match = item.name.toLowerCase().includes(q) || item.location.toLowerCase().includes(q);
+      if (!match) return false;
+      if (activeFolderId === 'all') return true;
+      if (activeFolderId === 'uncategorized') return !item.folderId;
+      return item.folderId === activeFolderId;
+    }),
+    sortKey,
+  );
 
-  const openEditModal = (item) => {
-    setEditingItem(item);
-    setItemName(item.name);
-    setItemLocation(item.location);
-    setItemQuantity(item.quantity);
-    setItemPhotoFile(null);
-    setItemPhotoUrl(item.photoUrl || '');
-    setItemFolderId(item.folderId || '');
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingItem(null);
-  };
-
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
-
-    if (activeFolderId === 'all') return true;
-    if (activeFolderId === 'uncategorized') return !item.folderId;
-    return item.folderId === activeFolderId;
-  });
-
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400 font-medium">Resolving Cloud PERSISTENCE session...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-[3px] border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-[var(--text-2)] font-medium">{t('loadingSession')}</p>
         </div>
       </div>
     );
   }
 
-  // Authentication Layout
+  /* ── Auth ── */
   if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-0 -left-4 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-0 -right-4 w-96 h-96 bg-violet-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-75"></div>
-        
-        <motion.div 
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          className="w-full max-w-md glass-panel p-8 rounded-2xl shadow-2xl relative z-10"
-        >
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-3">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-              LogiSync Cloud
-            </h1>
-            <p className="text-sm text-slate-400 mt-1">Production Operations Center</p>
-          </div>
+    /* Register */
+    if (isSignUp) {
+      const pwOk = pwScore === 5 && password === confirmPassword;
+      return (
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
+          style={{ background: 'var(--bg)' }}>
 
-          <form onSubmit={handleAuth} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Operator Email</label>
-              <input 
-                id="auth-email-input"
-                type="email" 
-                required 
-                className="w-full glass-input px-4 py-3 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none transition-all"
-                placeholder="operator@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+          {/* Theme toggle */}
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
+            {theme === 'dark'
+              ? <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              : <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            }
+          </button>
+
+          {/* Blob shapes */}
+          <div className="absolute pointer-events-none" style={{ top: '-15%', left: '-12%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.35) 0%, rgba(13,148,136,0.1) 60%, transparent 80%)', filter: 'blur(80px)' }} />
+          <div className="absolute pointer-events-none" style={{ bottom: '-20%', right: '-10%', width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, rgba(56,189,248,0.25) 0%, rgba(3,105,161,0.1) 60%, transparent 80%)', filter: 'blur(90px)' }} />
+          <div className="absolute pointer-events-none" style={{ top: '40%', right: '20%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 px-6 py-12 w-full max-w-4xl mx-auto">
+            {/* Left text */}
+            <div className="hidden lg:flex flex-col gap-5">
+              <LogoMark size={52} />
+              <h1 className="text-5xl font-black leading-tight" style={{ color: 'var(--text)' }}>Join<br/>LogiSync</h1>
+              <p className="text-base font-medium max-w-[220px]" style={{ color: 'var(--text-3)' }}>{t('registerSubtext')}</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
-              <input 
-                id="auth-password-input"
-                type="password" 
-                required 
-                className="w-full glass-input px-4 py-3 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none transition-all"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            {/* Form card */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+              className="w-full max-w-sm rounded-2xl p-8 flex flex-col gap-5"
+              style={{ background: 'var(--surface-overlay)', backdropFilter: 'blur(20px)', border: '1px solid var(--border-strong)' }}>
 
-            {authError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-medium">
-                {authError}
+              {/* Mobile logo */}
+              <div className="flex items-center gap-2.5 mb-1 lg:hidden">
+                <LogoMark size={24} />
+                <span className="font-bold text-base" style={{ color: 'var(--text)' }}>LogiSync</span>
               </div>
-            )}
 
-            <button 
-              id="auth-submit-btn"
-              type="submit" 
-              className="w-full py-3 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-500/20 transform active:scale-95 transition-all"
-            >
-              {isSignUp ? 'Establish Operator Account' : 'Authenticate Operator'}
-            </button>
-          </form>
+              <form onSubmit={handleAuth} className="flex flex-col gap-4">
+                {/* Name */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-2)' }}>{t('fullNameLabel')}</label>
+                  <input id="reg-name" type="text" required placeholder={t('fullNameLabel')} value={fullName}
+                    onChange={e => setFullName(e.target.value)} className="field w-full px-4 py-3 text-sm" />
+                </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-2)' }}>{t('emailLabel')}</label>
+                  <input id="reg-email" type="email" required placeholder="you@company.com" value={email}
+                    onChange={e => setEmail(e.target.value)} className="field w-full px-4 py-3 text-sm" />
+                </div>
+                {/* Password */}
+                <div className="flex flex-col gap-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-2)' }}>{t('passwordLabel')}</label>
+                  <div className="relative">
+                    <input id="reg-pw" type={showPassword ? 'text' : 'password'} required placeholder="••••••••" value={password}
+                      onChange={e => setPassword(e.target.value)} autoComplete="new-password"
+                      className="field w-full px-4 py-3 pr-11 text-sm" />
+                    <button type="button" onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: 'var(--text-3)' }}>
+                      {showPassword ? <EyeOff /> : <EyeOn />}
+                    </button>
+                  </div>
+                  {/* Strength bar */}
+                  {password.length > 0 && (
+                    <>
+                      <div className="flex gap-1 mt-0.5">
+                        {[1,2,3,4,5].map(i => (
+                          <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300"
+                            style={{ background: i <= pwScore ? pwStrength.color : 'var(--border-strong)' }} />
+                        ))}
+                      </div>
+                      <p className="text-[10px] font-bold tracking-wide" style={{ color: pwStrength.color }}>
+                        {pwStrength.label}
+                      </p>
+                    </>
+                  )}
+                </div>
+                {/* Confirm password */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-2)' }}>{t('confirmPasswordLabel')}</label>
+                  <div className="relative">
+                    <input id="reg-cpw" type={showConfirmPassword ? 'text' : 'password'} required placeholder="••••••••" value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password"
+                      className="field w-full px-4 py-3 pr-11 text-sm" />
+                    <button type="button" onClick={() => setShowConfirmPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: 'var(--text-3)' }}>
+                      {showConfirmPassword ? <EyeOff /> : <EyeOn />}
+                    </button>
+                  </div>
+                  {confirmPassword && (
+                    <p className="text-[10px] mt-1.5 font-medium"
+                      style={{ color: password === confirmPassword ? 'var(--success)' : 'var(--danger)' }}>
+                      {password === confirmPassword ? `✓ ${t('pwMatch')}` : `✕ ${t('passwordMismatch')}`}
+                    </p>
+                  )}
+                </div>
 
-          <div className="mt-6 text-center">
-            <button 
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs text-slate-400 hover:text-indigo-400 transition-colors"
-            >
-              {isSignUp ? 'Already registered? Login here' : 'New operator? Request Cloud Credentials'}
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+                {/* Rules checklist */}
+                {password.length > 0 && (
+                  <div className="grid grid-cols-1 gap-1.5 p-3 rounded-xl"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                    {pwRules.map(({ key, met, label }) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 transition-all"
+                          style={{ background: met ? 'var(--success-bg)' : 'var(--border-strong)', color: met ? 'var(--success)' : 'transparent' }}>
+                          {met ? '✓' : ''}
+                        </span>
+                        <span className="text-[11px] font-medium transition-colors"
+                          style={{ color: met ? 'var(--text-2)' : 'var(--text-3)' }}>
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-  // Dashboard Layout
-  return (
-    <div className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)] flex flex-col transition-colors duration-200">
-      {/* Top Header Navigation */}
-      <header className="w-full bg-[var(--header-bg)] border-b border-[var(--panel-border)] backdrop-blur-md sticky top-0 z-40 p-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/10">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-[var(--text-color)] to-[var(--text-muted)] bg-clip-text text-transparent">
-                {t('appName')}
-              </h1>
-              <p className="text-[10px] text-[var(--text-muted)] font-semibold">
-                {t('operator')}: {profileName || user.email}
-              </p>
-            </div>
-          </div>
+                <AnimatePresence>
+                  {authError && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                      <div className="px-4 py-3 rounded-xl badge-danger text-xs font-medium">{authError}</div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-          <div className="flex items-center space-x-3">
-            {/* Navigation Tabs */}
-            <nav className="flex bg-[var(--input-bg)] rounded-xl p-1 border border-[var(--input-border)]">
-              <button
-                onClick={() => setCurrentTab('dashboard')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  currentTab === 'dashboard' 
-                  ? 'bg-indigo-500 text-white shadow' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                }`}
-              >
-                {t('dashboard')}
-              </button>
-              <button
-                onClick={() => setCurrentTab('profile')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  currentTab === 'profile' 
-                  ? 'bg-indigo-500 text-white shadow' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                }`}
-              >
-                {t('profile')}
-              </button>
-              <button
-                onClick={() => setCurrentTab('settings')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  currentTab === 'settings' 
-                  ? 'bg-indigo-500 text-white shadow' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                }`}
-              >
-                {t('settings')}
-              </button>
-            </nav>
+                <button id="auth-submit-btn" type="submit"
+                  disabled={authLoading || !pwOk}
+                  className="btn-primary w-full py-3 text-sm mt-1 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {authLoading && <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
+                  {t('signupSubmit')}
+                </button>
+              </form>
 
-            <button 
-              onClick={handleLogout}
-              className="px-3.5 py-1.5 bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] border border-[var(--input-border)] text-xs font-semibold text-[var(--text-muted)] rounded-lg hover:text-[var(--text-color)] transition-colors"
-            >
-              {t('logout')}
-            </button>
+              <div className="text-center">
+                <button onClick={() => { setIsSignUp(false); setAuthError(''); setShowPassword(false); setShowConfirmPassword(false); }}
+                  className="text-xs font-medium transition-colors hover:text-[var(--primary)]"
+                  style={{ color: 'var(--text-3)' }}>
+                  {t('backToLogin')}
+                </button>
+              </div>
+            </motion.div>
           </div>
         </div>
-      </header>
+      );
+    }
 
-      {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto flex p-4 md:p-6 items-stretch">
-        <AnimatePresence mode="wait">
-          {currentTab === 'dashboard' && (
-            /* Dashboard Tab Content */
-            <motion.div 
-              key="dashboard-view"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="w-full flex flex-col md:flex-row gap-6 items-stretch"
-            >
-              {/* Folders Sidebar */}
-              <aside className="w-full md:w-64 shrink-0 glass-panel rounded-2xl p-5 flex flex-col justify-between self-start">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-[var(--panel-border)]">
-                    <h2 className="text-sm font-bold text-[var(--text-color)] uppercase tracking-wider">{t('folders')}</h2>
-                    <svg className="w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                  </div>
+    /* Login */
+    return (
+      <div className="min-h-screen flex relative">
+        {/* Left panel */}
+        <div className="hidden lg:flex w-[45%] relative flex-col p-12 overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #0d2218 0%, #0a1a2e 50%, #06101a 100%)' }}>
+          {/* Grid overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.07]"
+            style={{ backgroundImage: 'linear-gradient(rgba(20,184,166,1) 1px, transparent 1px), linear-gradient(90deg, rgba(20,184,166,1) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
+          {/* Glow orbs */}
+          <div className="absolute pointer-events-none" style={{ top: '10%', left: '20%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.18) 0%, transparent 70%)', filter: 'blur(60px)' }} />
+          <div className="absolute pointer-events-none" style={{ bottom: '15%', right: '-5%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%)', filter: 'blur(60px)' }} />
 
-                  <nav className="flex flex-col space-y-1">
-                    <button
-                      onClick={() => setActiveFolderId('all')}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-between ${
-                        activeFolderId === 'all'
-                        ? 'bg-indigo-500/15 border-l-2 border-indigo-500 text-indigo-300'
-                        : 'hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                      }`}
-                    >
-                      <span>📁 {t('allStock')}</span>
-                      <span className="text-xs bg-[var(--input-bg)] px-2 py-0.5 rounded-md text-[var(--text-muted)]">{items.length}</span>
-                    </button>
+          {/* Logo */}
+          <div className="relative flex items-center gap-3 mb-auto">
+            <LogoMark size={36} />
+            <span className="text-white font-bold text-xl tracking-tight">LogiSync</span>
+          </div>
 
-                    <button
-                      onClick={() => setActiveFolderId('uncategorized')}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-between ${
-                        activeFolderId === 'uncategorized'
-                        ? 'bg-indigo-500/15 border-l-2 border-indigo-500 text-indigo-300'
-                        : 'hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                      }`}
-                    >
-                      <span>📄 {t('uncategorized')}</span>
-                      <span className="text-xs bg-[var(--input-bg)] px-2 py-0.5 rounded-md text-[var(--text-muted)]">
-                        {items.filter(i => !i.folderId).length}
-                      </span>
-                    </button>
+          {/* Warehouse illustration */}
+          <div className="relative flex-1 flex items-center justify-center">
+            <svg viewBox="0 0 400 280" className="w-full max-w-[360px] opacity-30" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Floor grid */}
+              {[0,1,2,3,4].map(i => (
+                <line key={`h${i}`} x1="20" y1={140+i*28} x2="380" y2={140+i*28} stroke="#14b8a6" strokeWidth="0.5" opacity="0.4"/>
+              ))}
+              {[0,1,2,3,4,5,6].map(i => (
+                <line key={`v${i}`} x1={20+i*60} y1="140" x2={20+i*60} y2="252" stroke="#14b8a6" strokeWidth="0.5" opacity="0.4"/>
+              ))}
+              {/* Shelf boxes */}
+              {[40,130,220,310].map((x,ci) => (
+                <g key={ci}>
+                  <rect x={x} y="40" width="50" height="90" rx="4" fill="rgba(20,184,166,0.12)" stroke="#14b8a6" strokeWidth="1"/>
+                  <rect x={x+5} y="50" width="18" height="22" rx="2" fill="rgba(20,184,166,0.3)"/>
+                  <rect x={x+27} y="50" width="18" height="22" rx="2" fill="rgba(56,189,248,0.25)"/>
+                  <rect x={x+5} y="78" width="40" height="18" rx="2" fill="rgba(20,184,166,0.2)"/>
+                  <rect x={x+5} y="102" width="18" height="18" rx="2" fill="rgba(13,148,136,0.35)"/>
+                  <rect x={x+27} y="102" width="18" height="18" rx="2" fill="rgba(20,184,166,0.2)"/>
+                </g>
+              ))}
+              {/* Conveyor belt */}
+              <rect x="60" y="195" width="280" height="18" rx="9" fill="rgba(20,184,166,0.15)" stroke="#14b8a6" strokeWidth="1"/>
+              {[0,1,2,3,4,5].map(i => (
+                <rect key={i} x={80+i*44} y="198" width="28" height="12" rx="3" fill="rgba(20,184,166,0.25)" stroke="#14b8a6" strokeWidth="0.5"/>
+              ))}
+              {/* Boxes on belt */}
+              <rect x="108" y="178" width="28" height="20" rx="3" fill="rgba(20,184,166,0.4)" stroke="#14b8a6" strokeWidth="1"/>
+              <rect x="196" y="178" width="28" height="20" rx="3" fill="rgba(56,189,248,0.3)" stroke="#38bdf8" strokeWidth="1"/>
+              <rect x="284" y="178" width="28" height="20" rx="3" fill="rgba(20,184,166,0.4)" stroke="#14b8a6" strokeWidth="1"/>
+              {/* Status lights */}
+              <circle cx="100" cy="160" r="5" fill="#14b8a6" opacity="0.8"/>
+              <circle cx="188" cy="160" r="5" fill="#14b8a6" opacity="0.6"/>
+              <circle cx="276" cy="160" r="5" fill="#22c55e" opacity="0.8"/>
+            </svg>
+          </div>
 
-                    <div className="pt-2 border-t border-[var(--panel-border)] space-y-1 max-h-60 overflow-y-auto">
-                      <p className="text-[10px] font-bold text-[var(--text-muted-dark)] uppercase px-3 py-1">{t('customFolders')}</p>
-                      {folders.map((folder) => {
-                        const folderCount = items.filter(i => i.folderId === folder.id).length;
-                        return (
-                          <button
-                            key={folder.id}
-                            onClick={() => setActiveFolderId(folder.id)}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors flex items-center justify-between ${
-                              activeFolderId === folder.id
-                              ? 'bg-indigo-500/15 border-l-2 border-indigo-500 text-indigo-300'
-                              : 'hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                            }`}
-                          >
-                            <span className="truncate">📁 {folder.name}</span>
-                            <span className="text-xs bg-[var(--input-bg)] px-1.5 py-0.5 rounded text-[var(--text-muted)]">{folderCount}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </nav>
+          {/* Tagline */}
+          <div className="relative">
+            <h2 className="text-3xl font-black text-white mb-2 leading-tight" style={{ whiteSpace: 'pre-line' }}>{t('loginTagline')}</h2>
+            <p className="text-sm text-white/40">{t('loginSubtext')}</p>
+          </div>
+        </div>
+
+        {/* Theme toggle */}
+        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', color: 'var(--text-2)' }}>
+          {theme === 'dark'
+            ? <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            : <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+          }
+        </button>
+
+        {/* Right form panel */}
+        <div className="flex-1 flex items-center justify-center p-8 relative overflow-hidden" style={{ background: 'var(--bg)' }}>
+          <div className="absolute pointer-events-none" style={{ top: '-20%', right: '-15%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.28) 0%, rgba(13,148,136,0.08) 60%, transparent 80%)', filter: 'blur(70px)' }} />
+          <div className="absolute pointer-events-none" style={{ bottom: '-15%', left: '-10%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(56,189,248,0.18) 0%, rgba(3,105,161,0.07) 60%, transparent 80%)', filter: 'blur(80px)' }} />
+          <div className="absolute pointer-events-none" style={{ top: '55%', right: '30%', width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, transparent 70%)', filter: 'blur(55px)' }} />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+            className="w-full max-w-sm">
+            {/* Mobile logo */}
+            <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+              <LogoMark size={28} />
+              <span className="text-[var(--text)] font-bold text-base tracking-tight">LogiSync</span>
+            </div>
+
+            <h2 className="text-2xl font-bold text-[var(--text)] mb-1">{t('signInTitle')}</h2>
+            <p className="text-sm text-[var(--text-2)] mb-8">{t('accessInventory')}</p>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{t('emailLabel')}</label>
+                <input id="auth-email-input" type="email" required className="field w-full px-4 py-3 text-sm"
+                  placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{t('passwordLabel')}</label>
+                <div className="relative">
+                  <input id="auth-password-input" type={showPassword ? 'text' : 'password'} required className="field w-full px-4 py-3 pr-11 text-sm"
+                    placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                  <button type="button" onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: 'var(--text-3)' }}>
+                    {showPassword
+                      ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                      : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    }
+                  </button>
                 </div>
+              </div>
+              <div className="flex items-center gap-2.5 pt-1">
+                <input type="checkbox" id="remember-me" className="w-4 h-4 rounded accent-[#14b8a6]" />
+                <label htmlFor="remember-me" className="text-sm text-[var(--text-2)] font-medium cursor-pointer select-none">{t('rememberMe')}</label>
+              </div>
 
-                <form onSubmit={handleCreateFolder} className="mt-6 pt-4 border-t border-[var(--panel-border)]">
-                  <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">{t('createNewFolder')}</label>
-                  <div className="flex gap-2">
-                    <input
-                      id="new-folder-input"
-                      type="text"
-                      placeholder={t('folderPlaceholder')}
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      className="flex-1 glass-input px-3 py-2 rounded-lg text-xs focus:outline-none text-[var(--text-color)] placeholder-[var(--text-muted)]"
-                    />
-                    <button
-                      id="create-folder-btn"
-                      type="submit"
-                      className="px-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-bold flex items-center justify-center transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                </form>
-              </aside>
-
-              {/* Grid content area */}
-              <div className="flex-1 flex flex-col gap-6">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                  <div className="w-full md:max-w-md relative">
-                    <input 
-                      id="search-input"
-                      type="text" 
-                      placeholder={t('searchPlaceholder')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full glass-input pl-11 pr-4 py-2.5 rounded-xl text-[var(--text-color)] placeholder-[var(--text-muted)] focus:outline-none transition-all text-sm"
-                    />
-                    <svg className="w-5 h-5 text-[var(--text-muted)] absolute left-4 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-
-                  <div className="flex items-center gap-3 w-full md:w-auto">
-                    {/* View Switcher Toggle */}
-                    <div className="bg-[var(--input-bg)] rounded-xl p-1 border border-[var(--input-border)] flex">
-                      <button
-                        onClick={() => setIsGridView(true)}
-                        className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                          isGridView
-                          ? 'bg-indigo-500 text-white shadow'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                        }`}
-                        title="Grid View"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => setIsGridView(false)}
-                        className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                          !isGridView
-                          ? 'bg-indigo-500 text-white shadow'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text-color)]'
-                        }`}
-                        title="List View"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    <button 
-                      id="add-item-btn"
-                      onClick={openAddModal}
-                      className="flex-1 md:flex-none px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/15 flex items-center justify-center space-x-2 transition-colors transform active:scale-95 cursor-pointer"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                      </svg>
-                      <span>{t('registerSKU')}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {filteredItems.length === 0 ? (
-                  <div className="text-center py-16 rounded-2xl glass-panel shadow-md flex-1 flex flex-col justify-center items-center border border-[var(--panel-border)]">
-                    <svg className="w-12 h-12 text-[var(--text-muted-dark)] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <h3 className="text-base font-bold text-[var(--text-color)]">{t('noInventory')}</h3>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">{t('emptyFolder')}</p>
-                  </div>
-                ) : (
-                  <motion.div 
-                    layout 
-                    className={isGridView ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6" : "flex flex-col gap-4"}
-                  >
-                    <AnimatePresence>
-                      {filteredItems.map((item) => (
-                        <InventoryCard 
-                          key={item.id} 
-                          item={item} 
-                          folders={folders}
-                          adjustQuantity={adjustQuantity}
-                          openEditModal={openEditModal}
-                          handleDeleteItem={handleDeleteItem}
-                          isGridView={isGridView}
-                          t={t}
-                        />
-                      ))}
-                    </AnimatePresence>
+              <AnimatePresence>
+                {authError && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="px-4 py-3 rounded-xl badge-danger text-xs font-medium">{authError}</div>
                   </motion.div>
                 )}
-              </div>
-            </motion.div>
-          )}
+              </AnimatePresence>
 
-          {currentTab === 'profile' && (
-            /* User Profile Tab Content */
-            <motion.div 
-              key="profile-view"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-lg mx-auto glass-panel p-8 rounded-2xl shadow-xl border border-[var(--panel-border)] self-start"
-            >
-              <h2 className="text-lg font-bold text-[var(--text-color)] mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                {t('profileHeader')}
-              </h2>
+              <button id="auth-submit-btn" type="submit" disabled={authLoading}
+                className="btn-primary w-full py-3 text-sm mt-2 disabled:opacity-60 flex items-center justify-center gap-2">
+                {authLoading && <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />}
+                {t('loginSubmit')}
+              </button>
+            </form>
 
-              <form onSubmit={handleSaveProfile} className="space-y-5">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">{t('registeredEmail')}</label>
-                  <input 
-                    type="email" 
-                    disabled 
-                    value={user.email}
-                    className="w-full glass-input px-4 py-2.5 rounded-lg text-[var(--text-muted)] bg-[var(--input-bg)] cursor-not-allowed opacity-60 text-sm focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">{t('displayName')}</label>
-                  <input 
-                    id="profile-name-input"
-                    type="text" 
-                    required 
-                    placeholder={t('displayNamePlaceholder')}
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full glass-input px-4 py-2.5 rounded-lg text-[var(--text-color)] placeholder-[var(--text-muted)] text-sm focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div className="pt-4 border-t border-[var(--panel-border)] flex gap-4">
-                  <button 
-                    id="profile-save-btn"
-                    type="submit" 
-                    disabled={savingProfile}
-                    className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-800 text-white font-semibold rounded-lg text-sm transition-colors shadow-lg shadow-indigo-500/15 cursor-pointer"
-                  >
-                    {savingProfile ? t('savingProfile') : t('saveProfile')}
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={handleLogout}
-                    className="px-5 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-lg text-sm transition-colors border border-red-500/20 cursor-pointer"
-                  >
-                    {t('logout')}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          )}
-
-          {currentTab === 'settings' && (
-            /* Settings Tab Content */
-            <motion.div 
-              key="settings-view"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-lg mx-auto glass-panel p-8 rounded-2xl shadow-xl border border-[var(--panel-border)] self-start"
-            >
-              <h2 className="text-lg font-bold text-[var(--text-color)] mb-6 flex items-center gap-2">
-                <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {t('settings')}
-              </h2>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">{t('themeLabel')}</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setTheme('light')}
-                      className={`py-3 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        theme === 'light'
-                        ? 'bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/10'
-                        : 'bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] text-[var(--text-muted)] border-[var(--input-border)]'
-                      }`}
-                    >
-                      <span>☀️</span> {t('lightMode')}
-                    </button>
-                    <button
-                      onClick={() => setTheme('dark')}
-                      className={`py-3 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        theme === 'dark'
-                        ? 'bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/10'
-                        : 'bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] text-[var(--text-muted)] border-[var(--input-border)]'
-                      }`}
-                    >
-                      <span>🌙</span> {t('darkMode')}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">{t('langLabel')}</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setLanguage('en')}
-                      className={`py-3 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        language === 'en'
-                        ? 'bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/10'
-                        : 'bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] text-[var(--text-muted)] border-[var(--input-border)]'
-                      }`}
-                    >
-                      {t('english')}
-                    </button>
-                    <button
-                      onClick={() => setLanguage('zh')}
-                      className={`py-3 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        language === 'zh'
-                        ? 'bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/10'
-                        : 'bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] text-[var(--text-muted)] border-[var(--input-border)]'
-                      }`}
-                    >
-                      {t('chinese')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <div className="mt-6 text-center">
+              <button onClick={() => { setIsSignUp(true); setAuthError(''); }}
+                className="text-sm text-[var(--text-2)] hover:text-[var(--primary)] transition-colors font-medium">
+                {t('switchSignup')}
+              </button>
+            </div>
+          </motion.div>
+        </div>
       </div>
+    );
+  }
 
-      {/* Add / Edit Item Modal */}
+  /* ── Main app ── */
+  const displayName = profileName || user.email.split('@')[0];
+
+  return (
+    <div className="h-screen flex text-[var(--text)] overflow-hidden" style={{ background: 'var(--bg)' }}>
       <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-[var(--panel-border)] flex flex-col md:flex-row" style={{background: 'var(--modal-bg)'}}
-            >
-              {/* Form Input Side */}
-              <form onSubmit={handleSaveItem} className="p-6 space-y-4 flex-1">
-                <div className="pb-3 border-b border-[var(--panel-border)] flex items-center justify-between">
-                  <h2 className="text-base font-bold text-[var(--text-color)]">
-                    {editingItem ? t('editingStock') : t('registerSKU')}
-                  </h2>
-                </div>
+        {showTutorial && (
+          <TutorialModal onClose={() => setShowTutorial(false)} t={t} />
+        )}
+      </AnimatePresence>
+      <Sidebar
+        displayName={displayName}
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        folders={folders}
+        items={items}
+        activeFolderId={activeFolderId}
+        setActiveFolderId={setActiveFolderId}
+        newFolderName={newFolderName}
+        setNewFolderName={setNewFolderName}
+        handleCreateFolder={handleCreateFolder}
+        handleLogout={handleLogout}
+        t={t}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+        onClearSelectedItem={() => setSelectedItem(null)}
+      />
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('itemName')}</label>
-                    <input 
-                      id="modal-name-input"
-                      type="text" 
-                      required
-                      placeholder={t('itemName')}
-                      value={itemName}
-                      onChange={(e) => setItemName(e.target.value)}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] placeholder-[var(--text-muted)] focus:outline-none transition-all text-sm"
-                    />
-                  </div>
+      {/* Content area */}
+      <div className="flex-1 flex flex-col min-w-0">
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('storageLocation')}</label>
-                    <input 
-                      id="modal-location-input"
-                      type="text" 
-                      required
-                      placeholder={t('storageLocation')}
-                      value={itemLocation}
-                      onChange={(e) => setItemLocation(e.target.value)}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] placeholder-[var(--text-muted)] focus:outline-none transition-all text-sm"
-                    />
-                  </div>
+        {/* Mobile nav bar — hidden on desktop (sidebar handles nav there) */}
+        <div className="lg:hidden sticky top-0 z-30 border-b border-[var(--border)]"
+          style={{ background: 'var(--header)', backdropFilter: 'blur(20px) saturate(160%)', WebkitBackdropFilter: 'blur(20px) saturate(160%)' }}>
+          <div className="flex items-center gap-3 px-4 sm:px-6 h-14">
+            <button onClick={() => setMobileMenuOpen(v => !v)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[var(--input-bg)] border border-[var(--input-border)] text-[var(--text-2)] shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="flex items-center gap-2">
+              <LogoMark size={22} />
+              <span className="font-bold text-sm text-[var(--text)]">LogiSync</span>
+            </div>
+          </div>
+        </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('quantity')}</label>
-                    <input 
-                      id="modal-quantity-input"
-                      type="number" 
-                      required
-                      min="0"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(e.target.value)}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] placeholder-[var(--text-muted)] focus:outline-none transition-all text-sm"
-                    />
-                  </div>
+        {/* Stats bar — lives outside main so it sticks flush below the nav bar with no padding gap */}
+        {currentTab === 'dashboard' && !selectedItem && (
+          <div className="border-b border-[var(--border)] z-20 shrink-0" style={{ background: 'var(--bg)' }}>
+            <DashboardStats items={items} compact={true} stuck={statsStuck} t={t} />
+          </div>
+        )}
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('associateFolder')}</label>
-                    <select
-                      id="modal-folder-select"
-                      value={itemFolderId}
-                      onChange={(e) => setItemFolderId(e.target.value)}
-                      className="w-full glass-input px-4 py-2 rounded-lg text-[var(--text-color)] bg-[var(--input-bg)] focus:outline-none transition-all text-sm"
-                    >
-                      <option value="">{t('uncategorized')}</option>
-                      {folders.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                  </div>
+        {/* Page */}
+        <main ref={mainRef} className="flex-1 px-4 sm:px-6 py-6 pb-12 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            {/* Item detail view */}
+            {selectedItem && (
+              <motion.div key="item-detail" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}>
+                <ItemDetailView
+                  item={selectedItem}
+                  folders={folders}
+                  adjustQuantity={adjustQuantity}
+                  openEditModal={item => { setEditingItem(item); setIsModalOpen(true); }}
+                  onBack={() => setSelectedItem(null)}
+                  t={t}
+                />
+              </motion.div>
+            )}
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">{t('stockPhoto')}</label>
-                    <div className="space-y-1">
-                      <input 
-                        id="modal-photo-file"
-                        type="file" 
-                        accept="image/*"
-                        onChange={(e) => setItemPhotoFile(e.target.files[0])}
-                        className="w-full text-xs text-[var(--text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-[var(--input-bg)] file:text-[var(--text-color)] hover:file:bg-[var(--panel-bg)] file:cursor-pointer"
-                      />
-                      {itemPhotoUrl && !itemPhotoFile && (
-                        <div className="text-[10px] text-[var(--text-muted-dark)] truncate max-w-xs">
-                          {t('photoUrlActive')}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            {/* Dashboard */}
+            {!selectedItem && currentTab === 'dashboard' && (
+              <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}
+                className="flex flex-col gap-5">
 
-                <div className="pt-4 border-t border-[var(--panel-border)] flex space-x-3">
-                  <button 
-                    type="button"
-                    onClick={closeModal}
-                    className="flex-1 py-2 bg-[var(--input-bg)] hover:bg-[var(--panel-bg)] text-[var(--text-muted)] font-semibold rounded-lg text-sm transition-colors border border-[var(--input-border)]"
-                  >
-                    {t('cancel')}
-                  </button>
-                  <button 
-                    id="modal-submit-btn"
-                    type="submit" 
-                    disabled={saving}
-                    className="flex-1 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-800 text-white font-semibold rounded-lg text-sm shadow-lg shadow-indigo-500/15 transition-colors flex items-center justify-center"
-                  >
-                    {saving ? (
-                      <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : (
-                      t('commitStock')
-                    )}
-                  </button>
-                </div>
-              </form>
-
-              {/* History logs sidebar (Only shown when editing item) */}
-              <div className="w-full md:w-72 bg-[var(--input-bg)] border-t md:border-t-0 md:border-l border-[var(--panel-border)] p-6 flex flex-col">
-                <div className="flex justify-between items-center pb-3 border-b border-[var(--panel-border)] mb-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">{t('changeLogHistory')}</h3>
-                  <button onClick={closeModal} className="text-[var(--text-muted-dark)] hover:text-[var(--text-color)]">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                {/* Toolbar */}
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                  <div className="relative flex-1 min-w-0">
+                    <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-3)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                  </button>
+                    <input id="search-input" type="text" placeholder={t('searchPlaceholder')}
+                      value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                      className="field w-full pl-10 pr-4 py-2.5 text-sm rounded-xl" />
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <SortBar sortKey={sortKey} setSortKey={setSortKey} />
+
+                    <div className="flex bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-0.5">
+                      {[
+                        { grid: true, d: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+                        { grid: false, d: 'M4 6h16M4 12h16M4 18h16' },
+                      ].map(({ grid, d }) => (
+                        <button key={String(grid)} onClick={() => setIsGridView(grid)}
+                          className={`p-2 rounded-lg transition-all ${isGridView === grid ? 'bg-[var(--primary)] text-white shadow-sm' : 'text-[var(--text-3)] hover:text-[var(--text)]'}`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={d} />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+
+                    <button onClick={() => exportToCSV(filteredItems, folders)}
+                      className="btn-ghost px-3 py-2 text-xs font-semibold flex items-center gap-1.5" title={t('exportCSV')}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="hidden sm:inline">{t('exportCSV')}</span>
+                    </button>
+
+                    <button id="add-item-btn"
+                      onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+                      className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                      </svg>
+                      {t('registerSKU')}
+                    </button>
+                  </div>
                 </div>
 
-                {!editingItem ? (
-                  <div className="flex-1 flex items-center justify-center text-center text-[var(--text-muted-dark)] text-xs py-8">
-                    {t('createSKUToLog')}
+                {/* Folders section */}
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-2)]">{t('folders')}</p>
+                    <span className="text-[10px] text-[var(--text-3)]">{folders.length} {t('customFolders').toLowerCase()}</span>
                   </div>
-                ) : historyLogs.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center text-center text-[var(--text-muted)] text-xs py-8">
-                    {t('noChangesLogged')}
-                  </div>
-                ) : (
-                  <div className="space-y-3 overflow-y-auto max-h-80 flex-1 pr-1">
-                    {historyLogs.map((log) => {
-                      const logDate = log.timestamp?.toDate() 
-                        ? log.timestamp.toDate().toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})
-                        : "Just Now";
+
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {/* System chips: All Stock + Uncategorized */}
+                    {[
+                      { id: 'all', label: t('allStock'), count: items.length },
+                      { id: 'uncategorized', label: t('uncategorized'), count: items.filter(i => !i.folderId).length },
+                    ].map(({ id, label, count }) => {
+                      const active = activeFolderId === id;
                       return (
-                        <div key={log.id} className="p-3 bg-[var(--panel-bg)] rounded-xl border border-[var(--panel-border)] text-[11px] space-y-1">
-                          <div className="flex items-center justify-between text-indigo-500 font-bold">
-                            <span>{log.action}</span>
-                            <span className="text-[var(--text-color)] bg-indigo-500/20 px-1.5 py-0.5 rounded text-[9px]">
-                              {log.quantity} Qty
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-[var(--text-muted)] truncate">By: {log.operator}</div>
-                          <div className="text-[9px] text-[var(--text-muted-dark)] text-right">{logDate}</div>
+                        <button key={id} onClick={() => setActiveFolderId(id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
+                          style={active ? {
+                            background: 'var(--primary-glow)', color: 'var(--primary)',
+                            borderColor: 'var(--primary)', boxShadow: '0 0 8px var(--primary)25',
+                          } : { background: 'var(--input-bg)', color: 'var(--text-3)', borderColor: 'var(--input-border)' }}>
+                          <span className="max-w-[120px] truncate">{label}</span>
+                          <span className="opacity-50 font-normal tabular-nums">{count}</span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Custom folder chips: color dot (opens picker) + label (filters) */}
+                    {folders.map(folder => {
+                      const count = items.filter(i => i.folderId === folder.id).length;
+                      const active = activeFolderId === folder.id;
+                      const color = folder.color || null;
+                      const chipStyle = active ? {
+                        color: color || 'var(--primary)',
+                        borderColor: color ? `${color}50` : 'var(--primary)',
+                        background: color ? `${color}18` : 'var(--primary-glow)',
+                        boxShadow: `0 0 8px ${color || 'var(--primary)'}25`,
+                      } : { background: 'var(--input-bg)', color: 'var(--text-3)', borderColor: 'var(--input-border)' };
+                      return (
+                        <div key={folder.id} className="flex items-center rounded-xl border text-xs font-semibold overflow-hidden transition-all"
+                          style={chipStyle}>
+                          {/* Color dot → opens picker */}
+                          <button type="button"
+                            onClick={e => openDashColorPicker(e, folder.id)}
+                            title={t('folderColour')}
+                            className="pl-2.5 pr-1 py-1.5 flex items-center hover:opacity-70 transition-opacity">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform hover:scale-125"
+                              style={{ background: color || 'var(--border-strong)', boxShadow: color ? `0 0 4px ${color}` : 'none' }} />
+                          </button>
+                          {/* Label → filters inventory */}
+                          <button type="button" onClick={() => setActiveFolderId(folder.id)}
+                            className="flex items-center gap-1 pr-2.5 py-1.5">
+                            <span className="max-w-[100px] truncate">{folder.name}</span>
+                            <span className="opacity-50 font-normal tabular-nums">{count}</span>
+                          </button>
                         </div>
                       );
                     })}
+
+                    {/* New folder inline */}
+                    {dashFolderOpen ? (
+                      <form onSubmit={handleDashCreateFolder} className="flex items-center gap-1.5">
+                        <input autoFocus type="text" placeholder={t('folderPlaceholder')}
+                          value={dashFolderName} onChange={e => setDashFolderName(e.target.value)}
+                          className="field px-3 py-1.5 text-xs rounded-xl w-32" />
+                        <button type="submit"
+                          className="w-7 h-7 rounded-lg btn-primary flex items-center justify-center shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                          </svg>
+                        </button>
+                        <button type="button" onClick={() => { setDashFolderOpen(false); setDashFolderName(''); }}
+                          className="w-7 h-7 rounded-lg btn-ghost flex items-center justify-center shrink-0 text-[var(--text-3)]">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </form>
+                    ) : (
+                      <button onClick={() => setDashFolderOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border-dashed border"
+                        style={{ borderColor: 'var(--border-strong)', color: 'var(--text-3)' }}>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                        {t('createNewFolder')}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dashboard color picker */}
+                  {dashColorFolderId && (
+                    <>
+                      <div className="fixed inset-0 z-[90]" onClick={() => setDashColorFolderId(null)} />
+                      <ColorSwatch
+                        currentColor={folders.find(f => f.id === dashColorFolderId)?.color || null}
+                        position={dashSwatchPos}
+                        onSelect={c => handleDashColorChange(dashColorFolderId, c)}
+                        t={t}
+                      />
+                    </>
+                  )}
+                  {/* Sentinel: when this scrolls above main's top, stats bar collapses to slim */}
+                  <div data-folders-end />
+                </div>
+
+                {/* Grid / empty state */}
+                {filteredItems.length === 0 ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex-1 flex flex-col items-center justify-center py-20 glass rounded-2xl">
+                    <div className="w-16 h-16 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-strong)] flex items-center justify-center mb-4">
+                      <svg className="w-8 h-8 text-[var(--text-3)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <h3 className="text-base font-bold text-[var(--text)] mb-1">
+                      {items.length === 0 ? t('emptyInventory') : t('noInventory')}
+                    </h3>
+                    <p className="text-sm text-[var(--text-2)] mb-5">
+                      {items.length === 0 ? t('emptyInventoryHint') : t('emptyFolder')}
+                    </p>
+                    {items.length === 0 && (
+                      <button onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+                        className="btn-primary px-5 py-2.5 text-sm flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+                        {t('registerSKU')}
+                      </button>
+                    )}
+                  </motion.div>
+                ) : (
+                  <div className={isGridView ? 'grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5' : 'flex flex-col gap-3'}>
+                    <AnimatePresence>
+                      {filteredItems.map(item => (
+                        <InventoryCard
+                          key={item.id} item={item} folders={folders}
+                          adjustQuantity={adjustQuantity}
+                          openEditModal={item => { setEditingItem(item); setIsModalOpen(true); }}
+                          handleDeleteItem={handleDeleteItem}
+                          onViewDetail={item => setSelectedItem(item)}
+                          isGridView={isGridView} t={t}
+                        />
+                      ))}
+                    </AnimatePresence>
                   </div>
                 )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            )}
+
+            {/* Profile & Settings */}
+            {!selectedItem && currentTab === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.2 }}>
+                <ProfileSettings
+                  user={user}
+                  profileName={profileName}
+                  setProfileName={setProfileName}
+                  savingProfile={savingProfile}
+                  handleSaveProfile={handleSaveProfile}
+                  theme={theme}
+                  setTheme={setTheme}
+                  language={language}
+                  setLanguage={setLanguage}
+                  t={t}
+                />
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </main>
+      </div>
+
+      <AddEditModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        editingItem={editingItem}
+        folders={folders}
+        user={user}
+        activeFolderId={activeFolderId}
+        t={t}
+      />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <ConfirmProvider>
+        <AppInner />
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }

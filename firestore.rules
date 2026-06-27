@@ -2,39 +2,84 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // User profile: only the owner can read/write their own profile
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
 
-    // Inventory: only the owner (uid field) can read/write their own items
+    function validString(val, maxLen) {
+      return val is string && val.size() > 0 && val.size() <= maxLen;
+    }
+
+    function optionalString(data, key, maxLen) {
+      return !(key in data) || data[key] == null || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function optionalNumber(data, key) {
+      return !(key in data) || data[key] == null || data[key] is number;
+    }
+
+    function validInventoryItem(data) {
+      return validString(data.name, 200)
+          && validString(data.location, 200)
+          && data.quantity is int && data.quantity >= 0
+          && data.uid is string
+          && optionalString(data, 'sku', 100)
+          && optionalString(data, 'photoUrl', 500)
+          && optionalString(data, 'folderId', 100)
+          && optionalNumber(data, 'price')
+          && (!(  'lowStockThreshold' in data)
+              || data.lowStockThreshold is int && data.lowStockThreshold >= 0);
+    }
+
+    function validFolder(data) {
+      return validString(data.name, 100)
+          && data.uid is string
+          && optionalString(data, 'color', 20);
+    }
+
+    // ── User profiles ────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Inventory ────────────────────────────────────────────────────────────
+
     match /inventory/{itemId} {
-      allow read: if request.auth != null
-                  && resource.data.uid == request.auth.uid;
+      allow read: if isOwner(resource.data.uid);
 
-      allow create: if request.auth != null
-                    && request.resource.data.uid == request.auth.uid;
+      allow create: if isOwner(request.resource.data.uid)
+                    && validInventoryItem(request.resource.data);
 
-      allow update, delete: if request.auth != null
-                             && resource.data.uid == request.auth.uid;
+      allow update: if isOwner(resource.data.uid)
+                    && isOwner(request.resource.data.uid)
+                    && validInventoryItem(request.resource.data);
 
-      // History logs: accessible only to the inventory item's owner
+      allow delete: if isOwner(resource.data.uid);
+
+      // History logs: cross-document ownership check
       match /history/{historyId} {
         allow read, write: if request.auth != null
-                           && get(/databases/$(database)/documents/inventory/$(itemId)).data.uid == request.auth.uid;
+          && get(/databases/$(database)/documents/inventory/$(itemId)).data.uid
+             == request.auth.uid;
       }
     }
 
-    // Folders: only the owner (uid field) can read/write their own folders
+    // ── Folders ──────────────────────────────────────────────────────────────
+
     match /folders/{folderId} {
-      allow read: if request.auth != null
-                  && resource.data.uid == request.auth.uid;
+      allow read: if isOwner(resource.data.uid);
 
-      allow create: if request.auth != null
-                    && request.resource.data.uid == request.auth.uid;
+      allow create: if isOwner(request.resource.data.uid)
+                    && validFolder(request.resource.data);
 
-      allow update, delete: if request.auth != null
-                             && resource.data.uid == request.auth.uid;
+      allow update: if isOwner(resource.data.uid)
+                    && isOwner(request.resource.data.uid)
+                    && validFolder(request.resource.data);
+
+      allow delete: if isOwner(resource.data.uid);
     }
   }
 }
