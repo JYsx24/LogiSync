@@ -21,6 +21,7 @@ import AddEditModal from './components/AddEditModal';
 import ItemDetailView from './components/ItemDetailView';
 import ProfileSettings from './components/ProfileSettings';
 import TutorialModal from './components/TutorialModal';
+import BarcodeScanner from './components/BarcodeScanner';
 
 const translations = {
   en: {
@@ -57,6 +58,13 @@ const translations = {
     switchLogin: 'Already have an account? Sign in',
     lowStockThreshold: 'Low Stock Alert',
     exportCSV: 'Export CSV',
+    importCSV: 'Import CSV', importCSVSuccess: '{n} items imported', importCSVError: 'Import failed — check CSV format',
+    importCSVHint: 'Expected columns: Name, SKU, Location, Quantity (Price, Folder optional)',
+    scanBarcode: 'Scan Barcode', scanBarcodeHint: 'Point camera at any barcode or QR code',
+    scanningLabel: 'Scanning…', cameraError: 'Camera unavailable',
+    cameraErrorHint: 'Allow camera access in browser settings, then try again.',
+    itemFound: 'Item found in inventory', noItemFound: 'No matching item found',
+    scannedCode: 'Scanned code', openItem: 'Open Item', addNewItem: 'Add as New Item',
     statTotalSKUs: 'Total SKUs', statTotalUnits: 'Total Units',
     statLowStock: 'Low Stock', statOutOfStock: 'Out of Stock',
     statSKUsShort: 'SKUs', statUnitsShort: 'Units', statLowShort: 'Low Stock', statOutShort: 'Out of Stock',
@@ -152,6 +160,13 @@ const translations = {
     switchLogin: '已有账户？立即登录',
     lowStockThreshold: '低库存预警',
     exportCSV: '导出CSV',
+    importCSV: '导入CSV', importCSVSuccess: '已导入 {n} 件商品', importCSVError: '导入失败——请检查CSV格式',
+    importCSVHint: '必填列：Name、SKU、Location、Quantity（Price、Folder可选）',
+    scanBarcode: '扫描条码', scanBarcodeHint: '将摄像头对准条形码或二维码',
+    scanningLabel: '扫描中…', cameraError: '摄像头不可用',
+    cameraErrorHint: '请在浏览器设置中允许访问摄像头，然后重试。',
+    itemFound: '在库存中找到商品', noItemFound: '未找到匹配商品',
+    scannedCode: '扫描结果', openItem: '打开商品', addNewItem: '新增商品',
     statTotalSKUs: '商品总数', statTotalUnits: '总库存量',
     statLowStock: '低库存', statOutOfStock: '缺货',
     statSKUsShort: '商品数', statUnitsShort: '库存量', statLowShort: '低库存', statOutShort: '缺货',
@@ -231,6 +246,51 @@ function exportToCSV(items, folders) {
   URL.revokeObjectURL(url);
 }
 
+function parseCSVRow(row) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; continue; }
+    current += ch;
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseImportCSV(text, folders) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { items: [], error: 'empty' };
+  const header = parseCSVRow(lines[0]).map(h => h.toLowerCase());
+  const nameIdx = header.indexOf('name');
+  const skuIdx = header.indexOf('sku');
+  const locationIdx = header.indexOf('location');
+  const qtyIdx = header.indexOf('quantity');
+  const priceIdx = header.indexOf('price');
+  const folderIdx = header.indexOf('folder');
+  if (nameIdx === -1 || locationIdx === -1 || qtyIdx === -1) return { items: [], error: 'columns' };
+  const items = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVRow(lines[i]);
+    if (!cols[nameIdx]) continue;
+    const folderName = folderIdx >= 0 ? cols[folderIdx] : '';
+    const folder = folders.find(f => f.name.toLowerCase() === folderName?.toLowerCase());
+    items.push({
+      name: cols[nameIdx] || '',
+      sku: skuIdx >= 0 ? (cols[skuIdx] || '') : '',
+      location: cols[locationIdx] || '',
+      quantity: parseInt(cols[qtyIdx]) || 0,
+      price: priceIdx >= 0 && cols[priceIdx] ? parseFloat(cols[priceIdx]) : null,
+      folderId: folder?.id || '',
+      photoUrl: '',
+      lowStockThreshold: 5,
+    });
+  }
+  return { items, error: null };
+}
+
 const EyeOn = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -290,6 +350,10 @@ function AppInner() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [prefillSku, setPrefillSku] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef(null);
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('logisync_tutorial_seen') !== 'true');
   const [dashFolderName, setDashFolderName] = useState('');
   const [dashFolderOpen, setDashFolderOpen] = useState(false);
@@ -454,6 +518,29 @@ function AppInner() {
       toast('Item removed');
       if (selectedItem?.id === itemId) setSelectedItem(null);
     } catch { toast('Failed to remove item', 'error'); }
+  };
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const { items: parsed, error } = parseImportCSV(text, folders);
+      if (error === 'empty' || error === 'columns') {
+        toast(t('importCSVError'), 'error');
+        return;
+      }
+      await Promise.all(parsed.map(item =>
+        addDoc(collection(db, 'inventory'), { ...item, uid: user.uid })
+      ));
+      toast(t('importCSVSuccess').replace('{n}', parsed.length));
+    } catch {
+      toast(t('importCSVError'), 'error');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const filteredItems = applySort(
@@ -642,8 +729,7 @@ function AppInner() {
 
               <div className="text-center">
                 <button onClick={() => { setIsSignUp(false); setAuthError(''); setShowPassword(false); setShowConfirmPassword(false); }}
-                  className="text-xs font-medium transition-colors hover:text-[var(--primary)]"
-                  style={{ color: 'var(--text-3)' }}>
+                  className="text-sm text-[var(--text-2)] font-medium transition-colors hover:text-[var(--primary)] underline underline-offset-2">
                   {t('backToLogin')}
                 </button>
               </div>
@@ -777,7 +863,7 @@ function AppInner() {
 
             <div className="mt-6 text-center">
               <button onClick={() => { setIsSignUp(true); setAuthError(''); }}
-                className="text-sm text-[var(--text-2)] hover:text-[var(--primary)] transition-colors font-medium">
+                className="text-sm text-[var(--text-2)] hover:text-[var(--primary)] transition-colors font-medium underline underline-offset-2">
                 {t('switchSignup')}
               </button>
             </div>
@@ -797,6 +883,15 @@ function AppInner() {
           <TutorialModal onClose={() => setShowTutorial(false)} t={t} />
         )}
       </AnimatePresence>
+      {showScanner && (
+        <BarcodeScanner
+          t={t}
+          items={items}
+          onClose={() => setShowScanner(false)}
+          onOpenItem={(item) => { setSelectedItem(item); setCurrentTab('dashboard'); }}
+          onAddWithSku={(sku) => { setPrefillSku(sku); setEditingItem(null); setIsModalOpen(true); }}
+        />
+      )}
       <Sidebar
         displayName={displayName}
         currentTab={currentTab}
@@ -892,12 +987,33 @@ function AppInner() {
                       ))}
                     </div>
 
+                    {/* Scan barcode */}
+                    <button onClick={() => setShowScanner(true)}
+                      className="btn-ghost px-3 py-2 text-xs font-semibold flex items-center gap-1.5" title={t('scanBarcode')}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                      </svg>
+                      <span className="hidden sm:inline">{t('scanBarcode')}</span>
+                    </button>
+
+                    {/* Export CSV */}
                     <button onClick={() => exportToCSV(filteredItems, folders)}
                       className="btn-ghost px-3 py-2 text-xs font-semibold flex items-center gap-1.5" title={t('exportCSV')}>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       <span className="hidden sm:inline">{t('exportCSV')}</span>
+                    </button>
+
+                    {/* Import CSV */}
+                    <input ref={importInputRef} type="file" accept=".csv,text/csv" className="sr-only"
+                      onChange={handleImportCSV} />
+                    <button onClick={() => importInputRef.current?.click()} disabled={importing}
+                      className="btn-ghost px-3 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50" title={t('importCSV')}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span className="hidden sm:inline">{importing ? '…' : t('importCSV')}</span>
                     </button>
 
                     <button id="add-item-btn"
@@ -1083,11 +1199,12 @@ function AppInner() {
 
       <AddEditModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setPrefillSku(''); }}
         editingItem={editingItem}
         folders={folders}
         user={user}
         activeFolderId={activeFolderId}
+        prefillSku={prefillSku}
         t={t}
       />
     </div>

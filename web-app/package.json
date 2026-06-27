@@ -13,6 +13,7 @@
     "@sentry/react": "^10.62.0",
     "firebase": "^12.14.0",
     "framer-motion": "^12.40.0",
+    "html5-qrcode": "^2.3.8",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "recharts": "^3.9.0"

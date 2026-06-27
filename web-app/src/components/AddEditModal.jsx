@@ -45,7 +45,7 @@ function TimelineEntry({ log }) {
   );
 }
 
-export default function AddEditModal({ isOpen, onClose, editingItem, folders, user, activeFolderId, t }) {
+export default function AddEditModal({ isOpen, onClose, editingItem, folders, user, activeFolderId, prefillSku, t }) {
   const toast = useToast();
 
   const [itemName, setItemName] = useState('');
@@ -75,7 +75,7 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       setLowStockThreshold('');
     } else {
       setItemName('');
-      setItemSku('');
+      setItemSku(prefillSku || '');
       setItemPrice('');
       setItemLocation('');
       setItemQuantity('');
@@ -84,7 +84,7 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       setItemFolderId(activeFolderId !== 'all' && activeFolderId !== 'uncategorized' ? activeFolderId : '');
       setLowStockThreshold('');
     }
-  }, [isOpen, editingItem, activeFolderId]);
+  }, [isOpen, editingItem, activeFolderId, prefillSku]);
 
   useEffect(() => {
     if (!editingItem) return;
