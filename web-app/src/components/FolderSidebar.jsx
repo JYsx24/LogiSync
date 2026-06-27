@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, query, where, getDocs, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const FOLDER_COLORS = [
   '#14b8a6', '#38bdf8', '#818cf8', '#a78bfa',
   '#f472b6', '#fb923c', '#facc15', '#4ade80',
@@ -14,6 +15,21 @@ function FolderIcon({ className, style }) {
     <svg className={className} style={style} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
     </svg>
+  );
+}
+
+function NavButton({ active, label, icon, count, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2.5 nav-item ${active ? 'active' : ''}`}
+    >
+      {icon}
+      <span className="flex-1 truncate">{label}</span>
+      <span className={`text-[10px] px-2 py-0.5 rounded-lg font-semibold ${active ? 'bg-[var(--primary-glow)] text-[var(--primary)]' : 'bg-[var(--input-bg)] text-[var(--text-3)]'}`}>
+        {count}
+      </span>
+    </button>
   );
 }
 
@@ -103,22 +119,6 @@ export default function FolderSidebar({
     setColorPickerFolderId(folderId);
   };
 
-  const NavButton = ({ id, label, icon, count }) => {
-    const active = activeFolderId === id;
-    return (
-      <button
-        onClick={() => setActiveFolderId(id)}
-        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2.5 nav-item ${active ? 'active' : ''}`}
-      >
-        {icon}
-        <span className="flex-1 truncate">{label}</span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-lg font-semibold ${active ? 'bg-[var(--primary-glow)] text-[var(--primary)]' : 'bg-[var(--input-bg)] text-[var(--text-3)]'}`}>
-          {count}
-        </span>
-      </button>
-    );
-  };
-
   return (
     <aside
       className="w-full lg:w-60 shrink-0 lg:self-start lg:sticky transition-[top] duration-200"
@@ -136,11 +136,13 @@ export default function FolderSidebar({
         {/* Built-in nav */}
         <nav className="flex flex-col gap-1">
           <NavButton
-            id="all" label={t('allStock')} count={items.length}
+            active={activeFolderId === 'all'} label={t('allStock')} count={items.length}
+            onClick={() => setActiveFolderId('all')}
             icon={<svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
           />
           <NavButton
-            id="uncategorized" label={t('uncategorized')} count={items.filter(i => !i.folderId).length}
+            active={activeFolderId === 'uncategorized'} label={t('uncategorized')} count={items.filter(i => !i.folderId).length}
+            onClick={() => setActiveFolderId('uncategorized')}
             icon={<svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
           />
         </nav>

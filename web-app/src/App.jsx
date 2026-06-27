@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signOut, onAuthStateChanged,
@@ -231,6 +231,19 @@ function exportToCSV(items, folders) {
   URL.revokeObjectURL(url);
 }
 
+const EyeOn = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+  </svg>
+);
+
+const EyeOff = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+  </svg>
+);
+
 const LogoMark = ({ size = 30 }) => (
   <svg width={size} height={Math.round(size * 0.88)} viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
     <polygon points="50,8 82,26 50,44 18,26" fill="#2dd4bf"/>
@@ -326,20 +339,20 @@ function AppInner() {
   }, [user, currentTab, selectedItem]);
 
   useEffect(() => {
-    if (!user) { setProfileName(''); return; }
+    if (!user) return;
     return onSnapshot(doc(db, 'users', user.uid), snap => {
       if (snap.exists()) setProfileName(snap.data().name || '');
     });
   }, [user]);
 
   useEffect(() => {
-    if (!user) { setFolders([]); return; }
+    if (!user) return;
     return onSnapshot(query(collection(db, 'folders'), where('uid', '==', user.uid)), snap =>
       setFolders(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
   useEffect(() => {
-    if (!user) { setItems([]); return; }
+    if (!user) return;
     return onSnapshot(query(collection(db, 'inventory'), where('uid', '==', user.uid)), snap =>
       setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
@@ -348,9 +361,10 @@ function AppInner() {
   useEffect(() => {
     if (selectedItem) {
       const fresh = items.find(i => i.id === selectedItem.id);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (fresh) setSelectedItem(fresh);
     }
-  }, [items]);
+  }, [items, selectedItem]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -470,17 +484,6 @@ function AppInner() {
   if (!user) {
     /* Register */
     if (isSignUp) {
-      const EyeOn = () => (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-        </svg>
-      );
-      const EyeOff = () => (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-        </svg>
-      );
       const pwOk = pwScore === 5 && password === confirmPassword;
       return (
         <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
@@ -783,7 +786,6 @@ function AppInner() {
         )}
       </AnimatePresence>
       <Sidebar
-        user={user}
         displayName={displayName}
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}

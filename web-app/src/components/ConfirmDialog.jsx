@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ConfirmContext = createContext(null);
@@ -59,6 +59,7 @@ export function ConfirmProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm() {
   return useContext(ConfirmContext);
 }

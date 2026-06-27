@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function ItemPhoto({ src, alt, className }) {
@@ -41,11 +41,6 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
   const [pendingDelta, setPendingDelta] = useState(0);
   const folderName = folders.find(f => f.id === item.folderId)?.name;
   const pendingQty = item.quantity + pendingDelta;
-
-  // Reset pending when list inline panel closes
-  useEffect(() => {
-    if (!isEditing) setPendingDelta(0);
-  }, [isEditing]);
 
   const handleConfirm = () => {
     adjustQuantity(item.id, 0, pendingQty);
@@ -92,7 +87,7 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
 
         {/* Toggle button */}
         <button
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => { if (isEditing) setPendingDelta(0); setIsEditing(!isEditing); }}
           className={`absolute top-3 right-3 w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
             isEditing ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-md' : 'bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text-3)] hover:text-[var(--text)]'
           }`}
@@ -153,7 +148,7 @@ export default function InventoryCard({ item, folders, adjustQuantity, openEditM
 
                 {/* Edit Item + Delete */}
                 <div className="flex gap-2">
-                  <button onClick={() => { openEditModal(item); setIsEditing(false); }}
+                  <button onClick={() => { openEditModal(item); setPendingDelta(0); setIsEditing(false); }}
                     className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold bg-[var(--primary-glow)] text-[var(--primary)] border border-[var(--primary)]/20 hover:bg-teal-500/20 transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

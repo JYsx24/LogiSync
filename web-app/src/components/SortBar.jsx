@@ -1,5 +1,3 @@
-import React from 'react';
-
 const SORT_OPTIONS = [
   { value: 'name-asc',  label: 'Name A→Z'     },
   { value: 'name-desc', label: 'Name Z→A'     },
@@ -21,6 +19,7 @@ export default function SortBar({ sortKey, setSortKey }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function applySort(items, sortKey) {
   const arr = [...items];
   switch (sortKey) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   collection, addDoc, updateDoc, doc,
@@ -7,6 +7,10 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { useToast } from './Toast';
+
+function FieldLabel({ children }) {
+  return <label className="block text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{children}</label>;
+}
 
 function TimelineEntry({ log }) {
   const date = log.timestamp?.toDate
@@ -59,6 +63,7 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
   useEffect(() => {
     if (!isOpen) return;
     if (editingItem) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItemName(editingItem.name);
       setItemSku(editingItem.sku || '');
       setItemPrice(editingItem.price != null ? String(editingItem.price) : '');
@@ -82,7 +87,7 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
   }, [isOpen, editingItem, activeFolderId]);
 
   useEffect(() => {
-    if (!editingItem) { setHistoryLogs([]); return; }
+    if (!editingItem) return;
     const historyRef = collection(db, 'inventory', editingItem.id, 'history');
     const q = query(historyRef, orderBy('timestamp', 'desc'));
     return onSnapshot(q, snap => setHistoryLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -135,10 +140,6 @@ export default function AddEditModal({ isOpen, onClose, editingItem, folders, us
       setSaving(false);
     }
   };
-
-  const FieldLabel = ({ children }) => (
-    <label className="block text-[10px] font-bold text-[var(--text-2)] uppercase tracking-wider mb-1.5">{children}</label>
-  );
 
   return (
     <AnimatePresence>

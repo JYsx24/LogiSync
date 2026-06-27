@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  collection, addDoc, updateDoc, deleteDoc,
-  setDoc, doc, getDocs, query, where, writeBatch, serverTimestamp,
+  collection, updateDoc,
+  doc, getDocs, query, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useConfirm } from './ConfirmDialog';
 import { useToast } from './Toast';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const FOLDER_COLORS = [
   '#14b8a6', '#38bdf8', '#818cf8', '#a78bfa',
   '#f472b6', '#fb923c', '#facc15', '#4ade80',
@@ -47,7 +48,7 @@ export function ColorSwatch({ currentColor, position, onSelect, t }) {
 }
 
 export default function Sidebar({
-  user, displayName, currentTab, setCurrentTab,
+  displayName, currentTab, setCurrentTab,
   folders, items, activeFolderId, setActiveFolderId,
   newFolderName, setNewFolderName, handleCreateFolder,
   handleLogout, t, mobileOpen, onMobileClose,
@@ -75,7 +76,7 @@ export default function Sidebar({
       await batch.commit();
       if (activeFolderId === folder.id) setActiveFolderId('all');
       toast(t('folderDeleted'));
-    } catch (err) {
+    } catch {
       toast(t('failedDeleteFolder'), 'error');
     }
   };
