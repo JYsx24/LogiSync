@@ -116,6 +116,16 @@ const translations = {
     pwRuleSpecial: 'Special character (!@#$...)',
     pwStrengthWeak: 'Weak', pwStrengthFair: 'Fair', pwStrengthGood: 'Good', pwStrengthStrong: 'Strong',
     pwMatch: 'Passwords match',
+    authErrEmailInUse: 'An account with this email already exists. Try signing in instead.',
+    authErrInvalidCredential: 'Incorrect email or password.',
+    authErrUserNotFound: 'No account found with this email.',
+    authErrWrongPassword: 'Incorrect password.',
+    authErrInvalidEmail: 'Please enter a valid email address.',
+    authErrWeakPassword: 'Password must be at least 6 characters.',
+    authErrTooManyRequests: 'Too many attempts. Please wait a moment and try again.',
+    authErrNetworkFailed: 'Network error — check your connection.',
+    authErrUserDisabled: 'This account has been disabled.',
+    authErrGeneric: 'Something went wrong. Please try again.',
     // Tutorial
     tutorialStep1Title: 'Welcome to LogiSync!',
     tutorialStep1Desc: 'Your cloud-based inventory system is ready. Here\'s a quick tour of the core workflow to get you up and running.',
@@ -225,6 +235,16 @@ const translations = {
     pwRuleSpecial: '特殊字符 (!@#$...)',
     pwStrengthWeak: '弱', pwStrengthFair: '一般', pwStrengthGood: '良好', pwStrengthStrong: '强',
     pwMatch: '密码匹配',
+    authErrEmailInUse: '此邮箱已被注册，请直接登录。',
+    authErrInvalidCredential: '邮箱或密码错误。',
+    authErrUserNotFound: '未找到此邮箱对应的账户。',
+    authErrWrongPassword: '密码错误。',
+    authErrInvalidEmail: '请输入有效的电子邮箱地址。',
+    authErrWeakPassword: '密码长度至少为 6 位。',
+    authErrTooManyRequests: '尝试次数过多，请稍后再试。',
+    authErrNetworkFailed: '网络错误，请检查您的连接。',
+    authErrUserDisabled: '该账户已被停用。',
+    authErrGeneric: '出现错误，请重试。',
     // Tutorial
     tutorialStep1Title: '欢迎使用 LogiSync！',
     tutorialStep1Desc: '您的云端库存系统已就绪。以下是核心工作流程的快速导览，帮助您快速上手。',
@@ -461,7 +481,18 @@ function AppInner() {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setAuthError(err.message.replace('Firebase: ', '').replace(/\s*\(.*\)\.?\s*$/, ''));
+      const codeMap = {
+        'auth/email-already-in-use': 'authErrEmailInUse',
+        'auth/invalid-credential': 'authErrInvalidCredential',
+        'auth/user-not-found': 'authErrUserNotFound',
+        'auth/wrong-password': 'authErrWrongPassword',
+        'auth/invalid-email': 'authErrInvalidEmail',
+        'auth/weak-password': 'authErrWeakPassword',
+        'auth/too-many-requests': 'authErrTooManyRequests',
+        'auth/network-request-failed': 'authErrNetworkFailed',
+        'auth/user-disabled': 'authErrUserDisabled',
+      };
+      setAuthError(t(codeMap[err.code] ?? 'authErrGeneric'));
     } finally { setAuthLoading(false); }
   };
 
