@@ -66,5 +66,13 @@ jobs:
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools@latest deploy --only hosting:prod --project logisync-66bed
+          deploy_output=$(npx firebase-tools@latest deploy --only hosting:prod --project logisync-66bed 2>&1) && true
+          exit_code=$?
+          rm -f /tmp/firebase-sa.json
+          echo "$deploy_output"
+          if echo "$deploy_output" | grep -q "is the current active version"; then
+            echo "Build unchanged — already live. Skipping."
+            exit 0
+          fi
+          exit $exit_code
           rm -f /tmp/firebase-sa.json
