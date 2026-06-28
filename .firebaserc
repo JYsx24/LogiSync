@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "logisync-66bed"
+  },
+  "targets": {
+    "logisync-66bed": {
+      "hosting": {
+        "dev":  ["logisync-66bed"],
+        "prod": ["logisync-prod"]
+      }
+    }
   }
 }

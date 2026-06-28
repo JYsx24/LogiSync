@@ -64,11 +64,11 @@ jobs:
           name: dist
           path: web-app/dist
 
-      - name: Deploy to Firebase Dev Channel
+      - name: Deploy to Dev Site (logisync-66bed.web.app)
         env:
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOGISYNC_66BED }}
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          npx firebase-tools@latest hosting:channel:deploy dev --project logisync-66bed
+          npx firebase-tools@latest deploy --only hosting:dev --project logisync-66bed
           rm -f /tmp/firebase-sa.json

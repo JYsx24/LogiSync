@@ -60,20 +60,11 @@ jobs:
           name: dist
           path: web-app/dist
 
-      - name: Deploy to Firebase Live Channel
+      - name: Deploy to Production Site (logisync.synxweb.com)
         env:
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LOGISYNC_66BED }}
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
-          OUTPUT=$(npx firebase-tools@latest deploy --only hosting --project logisync-66bed 2>&1) && CODE=0 || CODE=$?
+          npx firebase-tools@latest deploy --only hosting:prod --project logisync-66bed
           rm -f /tmp/firebase-sa.json
-          if [ $CODE -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "is the current active version"; then
-              echo "✓ Already up to date."
-              exit 0
-            fi
-            echo "$OUTPUT"
-            exit 1
-          fi
-          echo "$OUTPUT"
