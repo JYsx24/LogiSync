@@ -22,6 +22,8 @@ import ItemDetailView from './components/ItemDetailView';
 import ProfileSettings from './components/ProfileSettings';
 import TutorialModal from './components/TutorialModal';
 import BarcodeScanner from './components/BarcodeScanner';
+import EmailVerificationScreen from './components/EmailVerificationScreen';
+import { sendEmailVerification } from 'firebase/auth';
 
 const translations = {
   en: {
@@ -60,6 +62,13 @@ const translations = {
     exportCSV: 'Export CSV',
     importCSV: 'Import CSV', importCSVSuccess: '{n} items imported', importCSVError: 'Import failed — check CSV format',
     importCSVHint: 'Expected columns: Name, SKU, Location, Quantity (Price, Folder optional)',
+    emailVerifyTitle: 'Verify your email',
+    emailVerifySentTo: 'We sent a verification link to',
+    emailVerifyHint: 'Click the link in the email to activate your account, then come back here.',
+    emailVerifyCheck: 'I\'ve verified my email',
+    emailVerifyNotYet: 'Not verified yet — please check your inbox and click the link.',
+    emailVerifyResend: 'Resend email', emailVerifyResending: 'Sending…', emailVerifyResendIn: 'Resend in {s}s',
+    emailVerifyCancel: 'Sign out',
     scanBarcode: 'Scan Barcode', scanBarcodeHint: 'Point camera at any barcode or QR code',
     scanningLabel: 'Scanning…', cameraError: 'Camera unavailable',
     cameraErrorHint: 'Allow camera access in browser settings, then try again.',
@@ -107,6 +116,16 @@ const translations = {
     pwRuleSpecial: 'Special character (!@#$...)',
     pwStrengthWeak: 'Weak', pwStrengthFair: 'Fair', pwStrengthGood: 'Good', pwStrengthStrong: 'Strong',
     pwMatch: 'Passwords match',
+    authErrEmailInUse: 'An account with this email already exists. Try signing in instead.',
+    authErrInvalidCredential: 'Incorrect email or password.',
+    authErrUserNotFound: 'No account found with this email.',
+    authErrWrongPassword: 'Incorrect password.',
+    authErrInvalidEmail: 'Please enter a valid email address.',
+    authErrWeakPassword: 'Password must be at least 6 characters.',
+    authErrTooManyRequests: 'Too many attempts. Please wait a moment and try again.',
+    authErrNetworkFailed: 'Network error — check your connection.',
+    authErrUserDisabled: 'This account has been disabled.',
+    authErrGeneric: 'Something went wrong. Please try again.',
     // Tutorial
     tutorialStep1Title: 'Welcome to LogiSync!',
     tutorialStep1Desc: 'Your cloud-based inventory system is ready. Here\'s a quick tour of the core workflow to get you up and running.',
@@ -162,6 +181,13 @@ const translations = {
     exportCSV: '导出CSV',
     importCSV: '导入CSV', importCSVSuccess: '已导入 {n} 件商品', importCSVError: '导入失败——请检查CSV格式',
     importCSVHint: '必填列：Name、SKU、Location、Quantity（Price、Folder可选）',
+    emailVerifyTitle: '验证您的邮箱',
+    emailVerifySentTo: '我们已向以下邮箱发送了验证链接',
+    emailVerifyHint: '请点击邮件中的链接以激活您的账户，然后返回此页面。',
+    emailVerifyCheck: '我已验证邮箱',
+    emailVerifyNotYet: '尚未验证 — 请检查收件箱并点击链接。',
+    emailVerifyResend: '重新发送邮件', emailVerifyResending: '发送中…', emailVerifyResendIn: '{s}秒后可重新发送',
+    emailVerifyCancel: '退出登录',
     scanBarcode: '扫描条码', scanBarcodeHint: '将摄像头对准条形码或二维码',
     scanningLabel: '扫描中…', cameraError: '摄像头不可用',
     cameraErrorHint: '请在浏览器设置中允许访问摄像头，然后重试。',
@@ -209,6 +235,16 @@ const translations = {
     pwRuleSpecial: '特殊字符 (!@#$...)',
     pwStrengthWeak: '弱', pwStrengthFair: '一般', pwStrengthGood: '良好', pwStrengthStrong: '强',
     pwMatch: '密码匹配',
+    authErrEmailInUse: '此邮箱已被注册，请直接登录。',
+    authErrInvalidCredential: '邮箱或密码错误。',
+    authErrUserNotFound: '未找到此邮箱对应的账户。',
+    authErrWrongPassword: '密码错误。',
+    authErrInvalidEmail: '请输入有效的电子邮箱地址。',
+    authErrWeakPassword: '密码长度至少为 6 位。',
+    authErrTooManyRequests: '尝试次数过多，请稍后再试。',
+    authErrNetworkFailed: '网络错误，请检查您的连接。',
+    authErrUserDisabled: '该账户已被停用。',
+    authErrGeneric: '出现错误，请重试。',
     // Tutorial
     tutorialStep1Title: '欢迎使用 LogiSync！',
     tutorialStep1Desc: '您的云端库存系统已就绪。以下是核心工作流程的快速导览，帮助您快速上手。',
@@ -440,11 +476,23 @@ function AppInner() {
       if (isSignUp) {
         const { user: u } = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, 'users', u.uid), { email: u.email, createdAt: serverTimestamp(), role: 'operator', name: fullName.trim() });
+        await sendEmailVerification(u);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
-      setAuthError(err.message.replace('Firebase: ', '').replace(/\s*\(.*\)\.?\s*$/, ''));
+      const codeMap = {
+        'auth/email-already-in-use': 'authErrEmailInUse',
+        'auth/invalid-credential': 'authErrInvalidCredential',
+        'auth/user-not-found': 'authErrUserNotFound',
+        'auth/wrong-password': 'authErrWrongPassword',
+        'auth/invalid-email': 'authErrInvalidEmail',
+        'auth/weak-password': 'authErrWeakPassword',
+        'auth/too-many-requests': 'authErrTooManyRequests',
+        'auth/network-request-failed': 'authErrNetworkFailed',
+        'auth/user-disabled': 'authErrUserDisabled',
+      };
+      setAuthError(t(codeMap[err.code] ?? 'authErrGeneric'));
     } finally { setAuthLoading(false); }
   };
 
@@ -564,6 +612,18 @@ function AppInner() {
           <p className="text-sm text-[var(--text-2)] font-medium">{t('loadingSession')}</p>
         </div>
       </div>
+    );
+  }
+
+  /* ── Email verification gate ── */
+  if (user && !user.emailVerified) {
+    return (
+      <EmailVerificationScreen
+        user={user}
+        t={t}
+        onVerified={() => setUser({ ...auth.currentUser })}
+        onLogout={handleLogout}
+      />
     );
   }
 
